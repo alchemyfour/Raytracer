@@ -1,11 +1,11 @@
-use crate::bintree::BinaryTree;
+use crate::bintree::TreeBranch;
 
 pub struct BVH {
-    tree: BinaryTree
+    tree: TreeBranch
 }
 
 impl BVH {
-    pub fn new(tree: BinaryTree) -> BVH {
+    pub fn new(tree: TreeBranch) -> BVH {
         BVH {tree}
     }
 }
