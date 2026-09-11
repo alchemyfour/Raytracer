@@ -3,6 +3,7 @@ use crate::box3d::Box3d;
 use crate::bvh::BVH;
 use crate::vector3d::{Plane, Vector3d};
 
+#[derive(Clone)]
 pub struct Triangle3d {
     a: Vector3d,
     b: Vector3d,
