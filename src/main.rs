@@ -6,5 +6,5 @@ mod bvh;
 mod bintree;
 
 fn main() {
-    println!("Hello, world!");
+    println!("Raytracer coming soon!");
 }
