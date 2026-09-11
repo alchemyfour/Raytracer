@@ -54,11 +54,8 @@ impl BVH {
         self.tree = TreeBranch::new(BV::new(scene_box, self.primitives())); // make the root tree branch a BV with all primitives
         let mut current_branch = &self.tree;
         let triangle_threshold = 5;
-        while true {
-            break
-        }
 
-
+        // TO BE IMPLEMENTED AS A RECURSIVE FUNCTION
         // 1. iterate through each branch (starting from the left) and split box along the longest axis, favouring x, y, then z respectfully
         // 2. sort through every triangle and append it onto either the left or right primitive vec (left being < coord along the split axis than right)
         // 3. check each, if it contains no triangles or less than the triangle threshold, then move rightwards. Otherwise move upwards until moving rightwards is possible
