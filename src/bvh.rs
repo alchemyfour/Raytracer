@@ -51,7 +51,7 @@ impl BVH {
         }
 
         let scene_box = Box3d::new(xmin, xmax, ymin, ymax, zmin, zmax);
-        self.tree = TreeBranch::new(BV::new(scene_box, self.primitives.clone())); // make the root tree branch a BV with all primitives
+        self.tree = TreeBranch::new(BV::new(scene_box, self.primitives())); // make the root tree branch a BV with all primitives
         let mut current_branch = &self.tree;
         let triangle_threshold = 5;
         while true {
