@@ -1,6 +1,6 @@
 use crate::bintree::TreeBranch;
 use crate::box3d::Box3d;
-use crate::bvh::{BV, BVH};
+use crate::bvh::{BV, BVH, Primitive};
 use crate::tri::Triangle3d;
 use crate::vector3d::Vector3d;
 
@@ -44,7 +44,14 @@ fn main() {
         Vector3d::new(0.87, 0.92, 0.82),
     );
 
-    let primitives = vec![t1, t2, t3, t4, t5, t6];
+    let primitives = vec![
+        Primitive::Triangle(t1),
+        Primitive::Triangle(t2),
+        Primitive::Triangle(t3),
+        Primitive::Triangle(t4),
+        Primitive::Triangle(t5),
+        Primitive::Triangle(t6),
+    ];
     let scene_box = Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };

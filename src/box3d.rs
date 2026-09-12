@@ -1,6 +1,6 @@
 use crate::vector3d::Vector3d;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Box3d {
     pub(crate) xmin: f32,
     pub(crate) xmax: f32,

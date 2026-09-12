@@ -3,7 +3,7 @@ use crate::box3d::Box3d;
 use crate::bvh::BVH;
 use crate::vector3d::{Plane, Vector3d};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Triangle3d {
     a: Vector3d,
     b: Vector3d,
@@ -22,7 +22,12 @@ impl Triangle3d {
     }
 
     pub fn plane(&self) -> Plane {
-        Plane::new(self.a, self.normal())
+        let bbox = self.box3d();
+        let dx = bbox.xmax - bbox.xmin;
+        let dy = bbox.ymax - bbox.ymin;
+        let dz = bbox.zmax - bbox.zmin;
+        let max_dim = dx.max(dy).max(dz);
+        Plane::new(self.normal(), self.a, max_dim, max_dim)
     }
 
     pub fn box3d(&self) -> Box3d {

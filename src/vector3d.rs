@@ -184,17 +184,44 @@ impl Vector3d {
     }
 }
 
-
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Plane {
-    normal: Vector3d,
-    origin: Vector3d,
+    pub normal: Vector3d,
+    pub origin: Vector3d,
+    pub x_size: f32,
+    pub y_size: f32,
 }
 
 impl Plane {
-    pub fn new(normal: Vector3d, origin: Vector3d) -> Plane {
-        Plane { normal, origin }
+    pub fn new(normal: Vector3d, origin: Vector3d, x_size: f32, y_size: f32) -> Plane {
+        Plane { normal, origin, x_size, y_size }
+    }
+
+    pub fn local_axes(&self) -> (Vector3d, Vector3d) {
+        let n = self.normal.normalize();
+        let helper = if n.x.abs() > 0.9 {
+            Vector3d::new(0.0, 1.0, 0.0)
+        } else {
+            Vector3d::new(1.0, 0.0, 0.0)
+        };
+        let local_x = n.cross(helper).normalize();
+        let local_y = n.cross(local_x).normalize();
+        (local_x, local_y)
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Sphere {
+    pub center: Vector3d,
+    pub radius: f32,
+}
+
+impl Sphere {
+    pub fn new(center: Vector3d, radius: f32) -> Sphere {
+        Sphere { center, radius }
+    }
+}
+
 pub struct Ray3d {
     origin: Vector3d,
     direction: Vector3d,
@@ -298,8 +325,3 @@ impl Ray3d {
         Some(self.t(&t))
     }
 }
-
-
-// FOR TRACING FROM THE BVH
-// DFS, use a stack
-
