@@ -9,7 +9,7 @@ enum Primitive {
     Box3d(Box3d)
 }
 
-#[derive()]
+
 pub struct BVH {
     pub tree: TreeBranch,
     pub primitives: Vec<Triangle3d>, // Properly implement center function later, for now primitives is just Triangle3d
