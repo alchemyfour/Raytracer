@@ -300,3 +300,6 @@ impl Ray3d {
 }
 
 
+// FOR TRACING FROM THE BVH
+// DFS, use a stack
+
