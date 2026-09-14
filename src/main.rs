@@ -12,6 +12,8 @@ mod intersection3d;
 mod bvh;
 mod bintree;
 mod ray;
+mod camera;
+mod pixel;
 
 fn main() {
     let t1 = Triangle3d::new(
@@ -41,8 +43,8 @@ fn main() {
     );
     let t6 = Triangle3d::new(
         Vector3d::new(0.82, 0.82, 0.82),
-        Vector3d::new(0.92, 0.82, 0.82),
-        Vector3d::new(0.87, 0.92, 0.82),
+        Vector3d::new(-0.92, -0.82, 0.82),
+        Vector3d::new(0.87, -0.92, 0.82),
     );
 
     let primitives = vec![
@@ -57,7 +59,7 @@ fn main() {
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
     bvh.build();
-    let ray = Ray3d::new(Vector3d::new(0.0, 0.0, 0.0), Vector3d::new(-0.0, -0.0, -1.0));
+    let ray = Ray3d::new(Vector3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0));
     let raycast = Raycast::new(ray, &bvh);
 
     println!("{:?}", raycast.resolve());
