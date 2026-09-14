@@ -1,8 +1,9 @@
 use crate::bintree::TreeBranch;
 use crate::box3d::Box3d;
 use crate::bvh::{BV, BVH, Primitive};
+use crate::ray::Raycast;
 use crate::tri::Triangle3d;
-use crate::vector3d::Vector3d;
+use crate::vector3d::{Ray3d, Vector3d};
 
 mod vector3d;
 mod tri;
@@ -56,4 +57,9 @@ fn main() {
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
     bvh.build();
+    let ray = Ray3d::new(Vector3d::new(0.0, 0.0, 0.0), Vector3d::new(-0.0, -0.0, -1.0));
+    let raycast = Raycast::new(ray, &bvh);
+
+    println!("{:?}", raycast.resolve());
+
 }

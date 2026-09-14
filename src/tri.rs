@@ -5,9 +5,9 @@ use crate::vector3d::{Plane, Vector3d};
 
 #[derive(Clone, Debug)]
 pub struct Triangle3d {
-    a: Vector3d,
-    b: Vector3d,
-    c: Vector3d,
+    pub a: Vector3d,
+    pub b: Vector3d,
+    pub c: Vector3d,
 }
 
 impl Triangle3d {

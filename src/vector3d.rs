@@ -112,7 +112,7 @@ impl Div<&Vector3d> for f32 {
     type Output = Vector3d;
 
     fn div(self, rhs: &Vector3d) -> Vector3d {
-        self / rhs
+        rhs / self
     }
 }
 
@@ -222,9 +222,10 @@ impl Sphere {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Ray3d {
-    origin: Vector3d,
-    direction: Vector3d,
+    pub origin: Vector3d,
+    pub direction: Vector3d,
 }
 
 impl Ray3d {
