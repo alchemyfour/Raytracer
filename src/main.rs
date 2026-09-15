@@ -30,7 +30,7 @@ fn main() {
 
     let sphere1 = Sphere::new(Vector3d::new(0.0, 16.0, 16.0), 5.0, Vector3d::new(0.0, 1.0, 0.0));
 
-    let sphere2 = Sphere::new(Vector3d::new(0.0, 8.0, 16.0), 7.0, Vector3d::new(9.0, 0.0, 0.0));
+    let sphere2 = Sphere::new(Vector3d::new(0.0, 1.0, 16.0), 7.0, Vector3d::new(1.0, 0.0, 0.0));
 
     let primitives = vec![
         Primitive::Triangle(t_mirror1),
@@ -56,3 +56,4 @@ fn main() {
     let pixels = camera.fire();
     let _ = save_png(&*pixels, "pixels.png");
 }
+// we're so much cuter than this guy, we don't have a brow ridge (Referring to a skull)

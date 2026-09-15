@@ -107,13 +107,13 @@ impl Camera {
             } else {
                 // take the final bounce and figure out how much it pointed skywards
                 let sky_factor = pixel.raycast.ray3d.direction.x;
-                let mut basecolor = pixel.intersections[0].color;
+                let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
                 for intersection in &pixel.intersections {
                     basecolor = intersection.color + basecolor;
                 }
-                let reflection_color = (basecolor+sky_color*sky_factor*2.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*4.0);
+                let reflection_color = (basecolor+sky_color*sky_factor*1.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*1.0);
                 let shaded_surface_color: Vector3d = Vector3d::new(pixel.intersections[0].color.x + pixel.intersections[0].normal.x, pixel.intersections[0].color.y + pixel.intersections[0].normal.x, pixel.intersections[0].color.z + pixel.intersections[0].normal.x);
-                let final_lerp = 1.0;
+                let final_lerp = 0.3;
                 let final_color = (reflection_color*final_lerp + shaded_surface_color *(1.0-final_lerp));
 
                 pixel.color = final_color;
