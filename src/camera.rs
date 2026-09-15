@@ -65,7 +65,7 @@ impl Camera {
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
-                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal);
+                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, Vector3d::new(0.5, 0.5, 0.5));
                         pixel.raycast = Raycast::new(
                             Ray3d::new(hit_point, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal),
                             pixel.raycast.bvh
@@ -88,21 +88,17 @@ impl Camera {
 
         for pixel in &mut misses {
             let sky_color = Vector3d::new(
-                pixel.raycast.ray3d.direction.x*4.0,
-                pixel.raycast.ray3d.direction.x*8.0,
-                pixel.raycast.ray3d.direction.x*12.0
+                pixel.raycast.ray3d.direction.x*4.00_f32.clamp(0.01, 0.5),
+                pixel.raycast.ray3d.direction.x*8.00_f32.clamp(0.1, 0.8),
+                pixel.raycast.ray3d.direction.x*12.0_f32.clamp(0.1, 0.98)
             );
             if pixel.intersections.is_empty() {
-                pixel.color = Vector3d::new(
-                    pixel.raycast.ray3d.direction.x*4.0,
-                    pixel.raycast.ray3d.direction.x*8.0,
-                    pixel.raycast.ray3d.direction.x*12.0
-                );
+                pixel.color = sky_color
                 // skycolor formula
             } else {
                 // take the final bounce and figure out how much it pointed skywards
                 let sky_factor = pixel.raycast.ray3d.direction.x;
-                let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
+                let mut basecolor = Vector3d::new(0.5, 0.5, 0.5);
                 for intersection in &pixel.intersections {
                     basecolor = intersection.color + basecolor;
                 }

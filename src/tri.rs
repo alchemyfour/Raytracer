@@ -8,11 +8,12 @@ pub struct Triangle3d {
     pub a: Vector3d,
     pub b: Vector3d,
     pub c: Vector3d,
+    pub color: Vector3d,
 }
 
 impl Triangle3d {
-    pub fn new(a: Vector3d, b: Vector3d, c: Vector3d) -> Triangle3d {
-        Triangle3d {a, b, c}
+    pub fn new(a: Vector3d, b: Vector3d, c: Vector3d, color: Vector3d) -> Triangle3d {
+        Triangle3d {a, b, c, color}
     }
 
     pub fn normal(&self) -> Vector3d {
