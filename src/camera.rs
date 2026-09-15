@@ -85,11 +85,30 @@ impl Camera {
         }
 
         // Apply background/hit coloring to the pixels in misses
+
         for pixel in &mut misses {
+            let sky_color = Vector3d::new(
+                pixel.raycast.ray3d.direction.x*4.0,
+                pixel.raycast.ray3d.direction.x*8.0,
+                pixel.raycast.ray3d.direction.x*12.0
+            );
             if pixel.intersections.is_empty() {
-                pixel.color = Vector3d::new(0.0, pixel.raycast.ray3d.direction.x*16.0, pixel.raycast.ray3d.direction.x*8.0); // White background
+                pixel.color = Vector3d::new(
+                    pixel.raycast.ray3d.direction.x*4.0,
+                    pixel.raycast.ray3d.direction.x*8.0,
+                    pixel.raycast.ray3d.direction.x*12.0
+                );
+                // skycolor formula
             } else {
-                pixel.color = Vector3d::new(pixel.raycast.ray3d.direction.x*-4.0 + 0.3, pixel.bounces/5.0, 0.0);
+                // take the final bounce and figure out how much it pointed skywards
+                let sky_factor = pixel.raycast.ray3d.direction.x;
+                let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
+                for intersection in &pixel.intersections {
+                    basecolor = intersection.color + basecolor;
+                }
+                let finalcolor = (basecolor+sky_color*sky_factor)/(pixel.intersections.len()+1) as f32;
+
+                pixel.color = finalcolor;
             }
         }
 
