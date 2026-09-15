@@ -16,9 +16,9 @@ impl Primitive {
     pub fn color(&self, point: Vector3d) -> Vector3d {
         //Vector3d { x: 0.5, y: 0.5, z: 0.5}
         match self {
-            Primitive::Triangle(t) => t.normal(),
+            Primitive::Triangle(t) => t.color,
             Primitive::Box(b) => b.normal(point),
-            Primitive::Sphere(s) => s.normal(point),
+            Primitive::Sphere(s) => s.color,
             Primitive::Plane(p) => p.normal(),
         }
     }
