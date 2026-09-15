@@ -2,6 +2,7 @@ use crate::bvh::{BV, BVH, Primitive};
 use crate::vector3d::{Ray3d, Vector3d};
 use crate::bintree::TreeBranch;
 
+#[derive(Clone, Copy)]
 pub struct Raycast<'a> {
     pub ray3d: Ray3d,
     pub bvh: &'a BVH,
@@ -241,5 +242,44 @@ mod tests {
             }
             _ => panic!("Expected triangle hit"),
         }
+    }
+
+    #[test]
+    fn test_primitive_normals() {
+        use crate::vector3d::{Sphere, Plane};
+        use crate::tri::Triangle3d;
+        use crate::box3d::Box3d;
+
+        // 1. Triangle Normal
+        let tri = Triangle3d::new(
+            Vector3d::new(0.0, 0.0, 0.0),
+            Vector3d::new(1.0, 0.0, 0.0),
+            Vector3d::new(0.0, 1.0, 0.0),
+        );
+        let tri_prim = Primitive::Triangle(tri);
+        let normal_tri = tri_prim.normal(Vector3d::new(0.2, 0.2, 0.0));
+        assert_eq!(normal_tri, Vector3d::new(0.0, 0.0, 1.0));
+
+        // 2. Sphere Normal
+        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 2.0);
+        let sphere_prim = Primitive::Sphere(sphere);
+        let normal_sphere = sphere_prim.normal(Vector3d::new(2.0, 0.0, 0.0));
+        assert_eq!(normal_sphere, Vector3d::new(1.0, 0.0, 0.0));
+
+        // 3. Plane Normal
+        let plane = Plane::new(Vector3d::new(0.0, 1.0, 0.0), Vector3d::new(0.0, 0.0, 0.0), 10.0, 10.0);
+        let plane_prim = Primitive::Plane(plane);
+        let normal_plane = plane_prim.normal(Vector3d::new(5.0, 0.0, 5.0));
+        assert_eq!(normal_plane, Vector3d::new(0.0, 1.0, 0.0));
+
+        // 4. Box Normal
+        let box3d = Box3d::new(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+        let box_prim = Primitive::Box(box3d);
+        // Test right face (+x)
+        assert_eq!(box_prim.normal(Vector3d::new(1.0, 0.0, 0.0)), Vector3d::new(1.0, 0.0, 0.0));
+        // Test left face (-x)
+        assert_eq!(box_prim.normal(Vector3d::new(-1.0, 0.0, 0.0)), Vector3d::new(-1.0, 0.0, 0.0));
+        // Test top face (+y)
+        assert_eq!(box_prim.normal(Vector3d::new(0.0, 1.0, 0.0)), Vector3d::new(0.0, 1.0, 0.0));
     }
 }

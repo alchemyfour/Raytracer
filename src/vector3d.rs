@@ -208,6 +208,10 @@ impl Plane {
         let local_y = n.cross(local_x).normalize();
         (local_x, local_y)
     }
+
+    pub fn normal(&self) -> Vector3d {
+        self.normal.normalize()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -219,6 +223,10 @@ pub struct Sphere {
 impl Sphere {
     pub fn new(center: Vector3d, radius: f32) -> Sphere {
         Sphere { center, radius }
+    }
+
+    pub fn normal(&self, point: Vector3d) -> Vector3d {
+        (point - self.center).normalize()
     }
 }
 

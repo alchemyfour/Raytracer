@@ -14,6 +14,7 @@ mod bintree;
 mod ray;
 mod camera;
 mod pixel;
+mod png;
 
 fn main() {
     let t1 = Triangle3d::new(

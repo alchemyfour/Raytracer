@@ -12,6 +12,16 @@ pub enum Primitive {
 }
 
 impl Primitive {
+
+    pub fn normal(&self, point: Vector3d) -> Vector3d {
+        match self {
+            Primitive::Triangle(t) => t.normal(),
+            Primitive::Box(b) => b.normal(point),
+            Primitive::Sphere(s) => s.normal(point),
+            Primitive::Plane(p) => p.normal(),
+        }
+    }
+    
     pub fn center(&self) -> Vector3d {
         match self {
             Primitive::Triangle(t) => t.center(),

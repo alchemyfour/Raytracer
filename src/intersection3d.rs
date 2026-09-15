@@ -1,5 +1,6 @@
 use crate::vector3d::Vector3d;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Intersection3d {
     hit: bool,
     incidence: Vector3d,
