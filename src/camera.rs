@@ -1,3 +1,4 @@
+use std::ops::Add;
 use crate::bvh::BVH;
 use crate::intersection3d::Intersection3d;
 use crate::ray::Raycast;
@@ -12,6 +13,14 @@ pub struct Camera {
     resolutiony: f32,
     dir: Vector3d,
     bvh: BVH,
+}
+
+impl Add<f32> for Vector3d {
+    type Output = ();
+
+    fn add(self, rhs: f32) -> Self::Output {
+        todo!()
+    }
 }
 
 impl Camera {
@@ -65,7 +74,7 @@ impl Camera {
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
-                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, Vector3d::new(0.5, 0.5, 0.5));
+                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, primitive.color(hit_point));
                         pixel.raycast = Raycast::new(
                             Ray3d::new(hit_point, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal),
                             pixel.raycast.bvh
@@ -98,13 +107,16 @@ impl Camera {
             } else {
                 // take the final bounce and figure out how much it pointed skywards
                 let sky_factor = pixel.raycast.ray3d.direction.x;
-                let mut basecolor = Vector3d::new(0.5, 0.5, 0.5);
+                let mut basecolor = pixel.intersections[0].color;
                 for intersection in &pixel.intersections {
                     basecolor = intersection.color + basecolor;
                 }
-                let finalcolor = (basecolor+sky_color*sky_factor)/(pixel.intersections.len()+1) as f32;
+                let reflection_color = (basecolor+sky_color*sky_factor*2.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*4.0);
+                let shaded_surface_color: Vector3d = Vector3d::new(pixel.intersections[0].color.x + pixel.intersections[0].normal.x, pixel.intersections[0].color.y + pixel.intersections[0].normal.x, pixel.intersections[0].color.z + pixel.intersections[0].normal.x);
+                let final_lerp = 1.0;
+                let final_color = (reflection_color*final_lerp + shaded_surface_color *(1.0-final_lerp));
 
-                pixel.color = finalcolor;
+                pixel.color = final_color;
             }
         }
 

@@ -170,7 +170,7 @@ mod tests {
         let direction = Vector3d::new(0.0, 0.0, 1.0);
         let ray = Ray3d::new(origin, direction);
 
-        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 1.0);
+        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 1.0, Vector3d::new(1.0, 1.0, 1.0));
         let prim = Primitive::Sphere(sphere);
         let resolvable = Resolvable::Primitive(&prim);
 
@@ -191,6 +191,7 @@ mod tests {
             Vector3d::new(-1.0, -1.0, 0.0),
             Vector3d::new(1.0, -1.0, 0.0),
             Vector3d::new(0.0, 1.0, 0.0),
+            Vector3d::new(1.0, 1.0, 1.0),
         );
         let prim = Primitive::Triangle(tri);
         let resolvable = Resolvable::Primitive(&prim);
@@ -212,11 +213,13 @@ mod tests {
             Vector3d::new(-1.0, -1.0, 2.0),
             Vector3d::new(1.0, -1.0, 2.0),
             Vector3d::new(0.0, 1.0, 2.0),
+            Vector3d::new(1.0, 1.0, 1.0),
         );
         let tri2 = Triangle3d::new(
             Vector3d::new(-1.0, -1.0, 1.0),
             Vector3d::new(1.0, -1.0, 1.0),
             Vector3d::new(0.0, 1.0, 1.0),
+            Vector3d::new(1.0, 1.0, 1.0),
         );
 
         let primitives = vec![
@@ -255,6 +258,7 @@ mod tests {
             Vector3d::new(0.4, 0.4, 0.8),
             Vector3d::new(0.6, 0.4, 0.8),
             Vector3d::new(0.5, 0.6, 0.8),
+            Vector3d::new(1.0, 1.0, 1.0),
         );
 
         let primitives = vec![
@@ -285,13 +289,14 @@ mod tests {
             Vector3d::new(0.0, 0.0, 0.0),
             Vector3d::new(1.0, 0.0, 0.0),
             Vector3d::new(0.0, 1.0, 0.0),
+            Vector3d::new(1.0, 1.0, 1.0),
         );
         let tri_prim = Primitive::Triangle(tri);
         let normal_tri = tri_prim.normal(Vector3d::new(0.2, 0.2, 0.0));
         assert_eq!(normal_tri, Vector3d::new(0.0, 0.0, 1.0));
 
         // 2. Sphere Normal
-        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 2.0);
+        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 2.0, Vector3d::new(1.0, 1.0, 1.0));
         let sphere_prim = Primitive::Sphere(sphere);
         let normal_sphere = sphere_prim.normal(Vector3d::new(2.0, 0.0, 0.0));
         assert_eq!(normal_sphere, Vector3d::new(1.0, 0.0, 0.0));

@@ -33,11 +33,11 @@ impl Add<Vector3d> for &Vector3d {
     }
 }
 
-impl Add<&Vector3d> for Vector3d {
+impl Add<&f32> for Vector3d {
     type Output = Vector3d;
 
-    fn add(self, rhs: &Vector3d) -> Vector3d {
-        Vector3d::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    fn add(self, rhs: &f32) -> Vector3d {
+        Vector3d::new(self.x + rhs, self.y + rhs, self.z + rhs)
     }
 }
 
@@ -223,7 +223,7 @@ pub struct Sphere {
 
 impl Sphere {
     pub fn new(center: Vector3d, radius: f32, color: Vector3d) -> Sphere {
-        Sphere { center, radius, color: Vector3d::new(1.0, 1.0, 1.0) }
+        Sphere { center, radius, color }
     }
 
     pub fn normal(&self, point: Vector3d) -> Vector3d {

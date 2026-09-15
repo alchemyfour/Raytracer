@@ -30,7 +30,7 @@ fn main() {
 
     let sphere1 = Sphere::new(Vector3d::new(0.0, 16.0, 16.0), 5.0, Vector3d::new(0.0, 1.0, 0.0));
 
-    let sphere2 = Sphere::new(Vector3d::new(0.0, 8.0, 16.0), 7.0, Vector3d::new(1.0, 0.0, 0.0));
+    let sphere2 = Sphere::new(Vector3d::new(0.0, 8.0, 16.0), 7.0, Vector3d::new(9.0, 0.0, 0.0));
 
     let primitives = vec![
         Primitive::Triangle(t_mirror1),
@@ -42,13 +42,14 @@ fn main() {
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
     bvh.build();
+    let scale = 1.0;
 
     let mut camera = Camera::new(
         Vector3d::new(-25.0, 0.0, -50.0),
         50.0,
         70.0,
-        2380.0,
-        1220.0,
+        4160.0*scale,
+        1440.0*scale,
         Vector3d::new(0.5, 0.0, 1.0),
         bvh
     );
