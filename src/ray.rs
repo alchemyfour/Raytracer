@@ -245,6 +245,36 @@ mod tests {
     }
 
     #[test]
+    fn test_ray_starts_inside_bvh() {
+        use crate::tri::Triangle3d;
+        let origin = Vector3d::new(0.5, 0.5, 0.5);
+        let direction = Vector3d::new(0.0, 0.0, 1.0);
+        let ray = Ray3d::new(origin, direction);
+
+        let tri = Triangle3d::new(
+            Vector3d::new(0.4, 0.4, 0.8),
+            Vector3d::new(0.6, 0.4, 0.8),
+            Vector3d::new(0.5, 0.6, 0.8),
+        );
+
+        let primitives = vec![
+            Primitive::Triangle(tri),
+        ];
+
+        let mut bvh = BVH {
+            tree: TreeBranch::new(BV::new(Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0))),
+            primitives,
+        };
+        bvh.build();
+
+        let raycast = Raycast::new(ray, &bvh);
+        let resolve_result = raycast.resolve();
+        assert!(resolve_result.is_some());
+        let (hit_pt, _) = resolve_result.unwrap();
+        assert!((hit_pt.z - 0.8).abs() < 1e-4);
+    }
+
+    #[test]
     fn test_primitive_normals() {
         use crate::vector3d::{Sphere, Plane};
         use crate::tri::Triangle3d;

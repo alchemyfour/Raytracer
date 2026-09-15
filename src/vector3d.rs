@@ -329,7 +329,7 @@ impl Ray3d {
             return None;
         }
         
-        let t = if tmin >= 0.0 { tmin } else { tmax };
+        let t = tmin.max(0.0);
 
         Some(self.t(&t))
     }
