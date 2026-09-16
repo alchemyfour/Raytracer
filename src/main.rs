@@ -3,6 +3,7 @@ use crate::bintree::TreeBranch;
 use crate::box3d::Box3d;
 use crate::bvh::{BV, BVH, Primitive};
 use crate::camera::Camera;
+use crate::light::Light;
 use crate::png::save_png;
 use crate::tri::Triangle3d;
 use crate::vector3d::{Ray3d, Vector3d};
@@ -17,6 +18,7 @@ mod ray;
 mod camera;
 mod pixel;
 mod png;
+mod light;
 
 fn main() {
 
@@ -38,6 +40,9 @@ fn main() {
     sphere3.roughness = 0.9;
     sphere2.metallic = 0.0;
 
+    let mut sphere_light: Sphere = Sphere::new(Vector3d::new(-15.0, 10.0, 30.0), 10.0, Vector3d::new(1.0, 1.0, 1.0));
+    sphere_light.metallic = 1.0;
+
     let p0   = Vector3d::new( 5.0, -3.0, 20.0);
     let p1   = Vector3d::new(11.0, -3.0, 20.0);
     let p2   = Vector3d::new( 8.0, -3.0, 25.0);
@@ -51,6 +56,8 @@ fn main() {
     face3.roughness = 0.2;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
+    let light1 = Light::new(Vector3d::new(0.0, 15.0, 9.0), 10.0, 1.8);
+
     let primitives = vec![
         Primitive::Triangle(ground1),
         Primitive::Triangle(ground2),
@@ -61,13 +68,17 @@ fn main() {
         Primitive::Sphere(sphere1),
         Primitive::Sphere(sphere2),
         Primitive::Sphere(sphere3),
+        Primitive::Sphere(sphere_light),
     ];
 
     let scene_box = Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
     bvh.build();
-    let scale = 1.0;
+    let scale = 0.5;
+    let lights = vec![
+        light1,
+    ];
 
     let mut camera = Camera::new(
         Vector3d::new(0.0, 0.0, -50.0),
@@ -76,7 +87,8 @@ fn main() {
         4160.0 * scale,
         1440.0 * scale,
         Vector3d::new(0.0, 0.0, 1.0),
-        bvh
+        bvh,
+        lights,
     );
     let pixels = camera.fire();
     let _ = save_png(&*pixels, "pixels.png");

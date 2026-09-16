@@ -5,6 +5,7 @@ use crate::ray::Raycast;
 use crate::pixel::Pixel;
 use crate::vector3d::{Ray3d, Vector3d};
 use rand::{random, RngExt};
+use crate::light::Light;
 
 pub struct Camera {
     origin: Vector3d,
@@ -14,6 +15,7 @@ pub struct Camera {
     resolutiony: f32,
     dir: Vector3d,
     bvh: BVH,
+    pub lights: Vec<Light>
 }
 
 impl Add<f32> for Vector3d {
@@ -27,8 +29,8 @@ impl Add<f32> for Vector3d {
 
 
 impl Camera {
-    pub fn new(origin: Vector3d, fovy: f32, fovx: f32, resolutionx: f32, resolutiony: f32, dir: Vector3d, bvh: BVH) -> Self {
-        Camera {origin, fovy, fovx, resolutionx, resolutiony, dir, bvh}
+    pub fn new(origin: Vector3d, fovy: f32, fovx: f32, resolutionx: f32, resolutiony: f32, dir: Vector3d, bvh: BVH, lights: Vec<Light>) -> Self {
+        Camera {origin, fovy, fovx, resolutionx, resolutiony, dir, bvh, lights}
     }
 
     pub fn ray_direction(&self, x: f32, y: f32) -> Vector3d {
@@ -113,8 +115,11 @@ impl Camera {
                 // take the final bounce and figure out how much it pointed skywards
                 let sky_factor = pixel.raycast.ray3d.direction.y;
                 let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
-                for intersection in &pixel.intersections {
-                    basecolor = intersection.color + basecolor;
+                let mut brightness: f32 = 1.0;
+                    for intersection in &pixel.intersections {
+                        basecolor = intersection.color + basecolor;
+                        brightness = brightness * intersection.color.magnitude();
+
                 }
                 let reflection_color = (basecolor+sky_color*sky_factor*1.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*1.0);
                 let albedo: Vector3d = (pixel.intersections[0].color);
@@ -126,8 +131,17 @@ impl Camera {
                 let specular = ((pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(pixel.intersections[0].normal)) * pixel.intersections[0].normal).dot(self.dir));
                 let metallic = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(3.0);
                 let metallic_factor = pixel.intersections[0].metallic;
+                let mut lit: f32 = 0.0;
+                for light in self.lights.clone() {
+                    for intersection in &pixel.intersections {
+                        let light_dir = (light.position - intersection.location).normalize();
+                        let light_dist = (light.position - intersection.location).magnitude();
+                        let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness)/(light_dist/light.radius.powf(1.0));
+                        lit += brightness;
+                    }
+                }
 
-                pixel.color = final_color*specular * (1.0 - metallic_factor) + metallic * metallic_factor;
+                pixel.color = (final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)*lit;
                 // pixel.color = sky_color;
             }
         }
