@@ -220,11 +220,12 @@ pub struct Sphere {
     pub radius: f32,
     pub color: Vector3d,
     pub roughness: f32,
+    pub metallic: f32
 }
 
 impl Sphere {
     pub fn new(center: Vector3d, radius: f32, color: Vector3d) -> Sphere {
-        Sphere { center, radius, color, roughness: 0.02 }
+        Sphere { center, radius, color, roughness: 0.02, metallic: 1.0 }
     }
 
     pub fn normal(&self, point: Vector3d) -> Vector3d {

@@ -23,6 +23,16 @@ impl Primitive {
         }
     }
 
+    pub fn metallic(&self, point: Vector3d) -> f32 {
+        //Vector3d { x: 0.5, y: 0.5, z: 0.5}
+        match self {
+            Primitive::Triangle(t) => t.metallic,
+            Primitive::Box(b) => 0.0,
+            Primitive::Sphere(s) => s.metallic,
+            Primitive::Plane(p) => 0.0,
+        }
+    }
+
     pub fn roughness(&self, point: Vector3d) -> f32 {
         //Vector3d { x: 0.5, y: 0.5, z: 0.5}
         match self {

@@ -33,18 +33,22 @@ fn main() {
     let mut sphere1 = Sphere::new(Vector3d::new( 2.0,  0.0, 18.0), 3.0, Vector3d::new(0.1, 0.6, 0.2));
     let mut sphere2 = Sphere::new(Vector3d::new(14.0,  1.0, 27.0), 4.0, Vector3d::new(0.7, 0.15, 0.15));
     let mut sphere3 = Sphere::new(Vector3d::new(-3.0, -1.0, 12.0), 2.0, Vector3d::new(0.2, 0.3, 0.8));
-    sphere1.roughness = 0.1;
-    sphere2.roughness = 0.3;
+    sphere1.roughness = 0.05;
+    sphere2.roughness = 0.5;
     sphere3.roughness = 0.9;
+    sphere2.metallic = 0.0;
 
     let p0   = Vector3d::new( 5.0, -3.0, 20.0);
     let p1   = Vector3d::new(11.0, -3.0, 20.0);
     let p2   = Vector3d::new( 8.0, -3.0, 25.0);
     let apex = Vector3d::new( 8.0,  1.5, 21.7);
     let gold = Vector3d::new(0.9, 0.7, 0.1);
-    let face1 = Triangle3d::new(p0, p1, apex, gold);
-    let face2 = Triangle3d::new(p1, p2, apex, gold);
-    let face3 = Triangle3d::new(p2, p0, apex, gold);
+    let mut face1 = Triangle3d::new(p0, p1, apex, gold);
+    face1.roughness = 0.2;
+    let mut face2 = Triangle3d::new(p1, p2, apex, gold);
+    face2.roughness = 0.2;
+    let mut face3 = Triangle3d::new(p2, p0, apex, gold);
+    face3.roughness = 0.2;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
     let primitives = vec![
@@ -63,7 +67,7 @@ fn main() {
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
     bvh.build();
-    let scale = 2.0;
+    let scale = 1.0;
 
     let mut camera = Camera::new(
         Vector3d::new(0.0, 0.0, -50.0),

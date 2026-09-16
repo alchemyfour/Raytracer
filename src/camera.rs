@@ -77,7 +77,7 @@ impl Camera {
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
-                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, primitive.color(hit_point));
+                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, primitive.color(hit_point), primitive.metallic(hit_point));
                         let rand: Vector3d = Vector3d::new(random::<f32>(), random::<f32>(), random::<f32>());
                         pixel.raycast = Raycast::new(
                             Ray3d::new(hit_point, (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand)*primitive.roughness(hit_point)),
@@ -100,10 +100,11 @@ impl Camera {
         // Apply background/hit coloring to the pixels in misses
 
         for pixel in &mut misses {
+            let sky_change = 1.0;
             let sky_color = Vector3d::new(
-                pixel.raycast.ray3d.direction.y*4.00_f32.clamp(0.01, 0.5),
-                pixel.raycast.ray3d.direction.y*8.00_f32.clamp(0.1, 0.8),
-                pixel.raycast.ray3d.direction.y*12.0_f32.clamp(0.1, 0.98)
+                (pixel.raycast.ray3d.direction.y+sky_change)*4.00_f32.clamp(0.01, 0.4),
+                (pixel.raycast.ray3d.direction.y+sky_change)*8.00_f32.clamp(0.1, 0.8),
+                (pixel.raycast.ray3d.direction.y+sky_change)*12.0_f32.clamp(0.1, 0.98)
             );
             if pixel.intersections.is_empty() {
                 pixel.color = sky_color
@@ -121,10 +122,12 @@ impl Camera {
                 let cheap_lit = Vector3d::new(pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y);
                 let reflections: Vector3d = Vector3d::new(pixel.bounces - 1.0, pixel.bounces - 1.0, pixel.bounces - 1.0);
                 let final_lerp = sky_factor;
-                let final_color = (basecolor*final_lerp*sky_factor + sky_color*(1.0-final_lerp));
+                let final_color = (albedo*(pixel.intersections[0].normal.y+1.0)/2.0);
                 let specular = ((pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(pixel.intersections[0].normal)) * pixel.intersections[0].normal).dot(self.dir));
+                let metallic = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(3.0);
+                let metallic_factor = pixel.intersections[0].metallic;
 
-                pixel.color = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(9.0);
+                pixel.color = final_color*specular * (1.0 - metallic_factor) + metallic * metallic_factor;
                 // pixel.color = sky_color;
             }
         }
