@@ -71,8 +71,8 @@ fn main() {
 
     let mut camera = Camera::new(
         Vector3d::new(0.0, 0.0, -50.0),
-        50.0,
-        70.0,
+        50.0/0.0174533,
+        60.0/0.0174533,
         4160.0 * scale,
         1440.0 * scale,
         Vector3d::new(0.0, 0.0, 1.0),
