@@ -6,10 +6,10 @@ use std::path::Path;
 /// A sample only counts as salt/pepper if it's the min or max of its 3×3
 /// neighbourhood AND sits further than this from the neighbourhood median.
 /// 0.0 = replace every local extreme. Raise it to be more conservative.
-const IMPULSE_THRESHOLD: f32 = 0.3;
+const IMPULSE_THRESHOLD: f32 = 0.02;
 
 /// Std-dev (in pixels) of the Gaussian applied after denoising. 0.0 = off.
-const BLUR_SIGMA: f32 = 0.7;
+const BLUR_SIGMA: f32 = 1.3;
 
 /// Saves a slice of `Pixel`s to a PNG file.
 ///

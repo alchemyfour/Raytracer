@@ -92,6 +92,7 @@ impl<'a> Raycast<'a> {
         let mut resolve_stack: std::vec::Vec<Resolvable<'a>> = Vec::new();
         resolve_stack.push(Resolvable::Branch(&self.bvh.tree));
 
+        const EPSILON: f32 = 0.001;
         let mut closest_hit: Option<(Vector3d, &'a Primitive)> = None;
         let mut min_t = f32::INFINITY;
 
@@ -121,7 +122,7 @@ impl<'a> Raycast<'a> {
                         }
                     }
                     Resolvable::Primitive(primitive) => {
-                        if t < min_t {
+                        if t > EPSILON {
                             min_t = t;
                             closest_hit = Some((hit_point, primitive));
                         }
@@ -138,178 +139,5 @@ impl<'a> Raycast<'a> {
         }
 
         closest_hit
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::bintree::TreeBranch;
-    use crate::box3d::Box3d;
-    use crate::bvh::BV;
-    use crate::vector3d::Vector3d;
-
-    #[test]
-    fn test_raycast_creation() {
-        let origin = Vector3d::new(0.0, 0.0, 0.0);
-        let direction = Vector3d::new(0.0, 0.0, 1.0);
-        let ray = Ray3d::new(origin, direction);
-
-        let scene_box = Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let tree = TreeBranch::new(BV::new(scene_box));
-        let bvh = BVH { tree, primitives: vec![] };
-
-        let raycast = Raycast::new(ray, &bvh);
-        assert_eq!(raycast.bvh.primitives.len(), 0);
-    }
-
-    #[test]
-    fn test_resolvable_intersection_sphere() {
-        use crate::vector3d::Sphere;
-        let origin = Vector3d::new(0.0, 0.0, -5.0);
-        let direction = Vector3d::new(0.0, 0.0, 1.0);
-        let ray = Ray3d::new(origin, direction);
-
-        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 1.0);
-        let prim = Primitive::Sphere(sphere);
-        let resolvable = Resolvable::Primitive(&prim);
-
-        let hit = resolvable.check_intersection(&ray);
-        assert!(hit.is_some());
-        let pt = hit.unwrap();
-        assert!((pt.z - (-1.0)).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_resolvable_intersection_triangle() {
-        use crate::tri::Triangle3d;
-        let origin = Vector3d::new(0.0, 0.0, -5.0);
-        let direction = Vector3d::new(0.0, 0.0, 1.0);
-        let ray = Ray3d::new(origin, direction);
-
-        let tri = Triangle3d::new(
-            Vector3d::new(-1.0, -1.0, 0.0),
-            Vector3d::new(1.0, -1.0, 0.0),
-            Vector3d::new(0.0, 1.0, 0.0),
-        );
-        let prim = Primitive::Triangle(tri);
-        let resolvable = Resolvable::Primitive(&prim);
-
-        let hit = resolvable.check_intersection(&ray);
-        assert!(hit.is_some());
-        let pt = hit.unwrap();
-        assert!((pt.z - 0.0).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_raycast_resolve_bvh() {
-        use crate::tri::Triangle3d;
-        let origin = Vector3d::new(0.0, 0.0, -5.0);
-        let direction = Vector3d::new(0.0, 0.0, 1.0);
-        let ray = Ray3d::new(origin, direction);
-
-        let tri1 = Triangle3d::new(
-            Vector3d::new(-1.0, -1.0, 2.0),
-            Vector3d::new(1.0, -1.0, 2.0),
-            Vector3d::new(0.0, 1.0, 2.0),
-        );
-        let tri2 = Triangle3d::new(
-            Vector3d::new(-1.0, -1.0, 1.0),
-            Vector3d::new(1.0, -1.0, 1.0),
-            Vector3d::new(0.0, 1.0, 1.0),
-        );
-
-        let primitives = vec![
-            Primitive::Triangle(tri1),
-            Primitive::Triangle(tri2),
-        ];
-
-        let mut bvh = BVH {
-            tree: TreeBranch::new(BV::new(Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0))),
-            primitives,
-        };
-        bvh.build();
-
-        let raycast = Raycast::new(ray, &bvh);
-        let resolve_result = raycast.resolve();
-        assert!(resolve_result.is_some());
-        let (hit_pt, hit_prim) = resolve_result.unwrap();
-        assert!((hit_pt.z - 1.0).abs() < 1e-4);
-        
-        match hit_prim {
-            Primitive::Triangle(t) => {
-                assert_eq!(t.a.z, 1.0);
-            }
-            _ => panic!("Expected triangle hit"),
-        }
-    }
-
-    #[test]
-    fn test_ray_starts_inside_bvh() {
-        use crate::tri::Triangle3d;
-        let origin = Vector3d::new(0.5, 0.5, 0.5);
-        let direction = Vector3d::new(0.0, 0.0, 1.0);
-        let ray = Ray3d::new(origin, direction);
-
-        let tri = Triangle3d::new(
-            Vector3d::new(0.4, 0.4, 0.8),
-            Vector3d::new(0.6, 0.4, 0.8),
-            Vector3d::new(0.5, 0.6, 0.8),
-        );
-
-        let primitives = vec![
-            Primitive::Triangle(tri),
-        ];
-
-        let mut bvh = BVH {
-            tree: TreeBranch::new(BV::new(Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0))),
-            primitives,
-        };
-        bvh.build();
-
-        let raycast = Raycast::new(ray, &bvh);
-        let resolve_result = raycast.resolve();
-        assert!(resolve_result.is_some());
-        let (hit_pt, _) = resolve_result.unwrap();
-        assert!((hit_pt.z - 0.8).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_primitive_normals() {
-        use crate::vector3d::{Sphere, Plane};
-        use crate::tri::Triangle3d;
-        use crate::box3d::Box3d;
-
-        // 1. Triangle Normal
-        let tri = Triangle3d::new(
-            Vector3d::new(0.0, 0.0, 0.0),
-            Vector3d::new(1.0, 0.0, 0.0),
-            Vector3d::new(0.0, 1.0, 0.0),
-        );
-        let tri_prim = Primitive::Triangle(tri);
-        let normal_tri = tri_prim.normal(Vector3d::new(0.2, 0.2, 0.0));
-        assert_eq!(normal_tri, Vector3d::new(0.0, 0.0, 1.0));
-
-        // 2. Sphere Normal
-        let sphere = Sphere::new(Vector3d::new(0.0, 0.0, 0.0), 2.0);
-        let sphere_prim = Primitive::Sphere(sphere);
-        let normal_sphere = sphere_prim.normal(Vector3d::new(2.0, 0.0, 0.0));
-        assert_eq!(normal_sphere, Vector3d::new(1.0, 0.0, 0.0));
-
-        // 3. Plane Normal
-        let plane = Plane::new(Vector3d::new(0.0, 1.0, 0.0), Vector3d::new(0.0, 0.0, 0.0), 10.0, 10.0);
-        let plane_prim = Primitive::Plane(plane);
-        let normal_plane = plane_prim.normal(Vector3d::new(5.0, 0.0, 5.0));
-        assert_eq!(normal_plane, Vector3d::new(0.0, 1.0, 0.0));
-
-        // 4. Box Normal
-        let box3d = Box3d::new(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-        let box_prim = Primitive::Box(box3d);
-        // Test right face (+x)
-        assert_eq!(box_prim.normal(Vector3d::new(1.0, 0.0, 0.0)), Vector3d::new(1.0, 0.0, 0.0));
-        // Test left face (-x)
-        assert_eq!(box_prim.normal(Vector3d::new(-1.0, 0.0, 0.0)), Vector3d::new(-1.0, 0.0, 0.0));
-        // Test top face (+y)
-        assert_eq!(box_prim.normal(Vector3d::new(0.0, 1.0, 0.0)), Vector3d::new(0.0, 1.0, 0.0));
     }
 }

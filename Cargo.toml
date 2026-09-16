@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 png = "0.17.16"
+rand = "0.10.2"

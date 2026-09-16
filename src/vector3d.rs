@@ -218,12 +218,13 @@ impl Plane {
 pub struct Sphere {
     pub center: Vector3d,
     pub radius: f32,
-    pub color: Vector3d
+    pub color: Vector3d,
+    pub roughness: f32,
 }
 
 impl Sphere {
     pub fn new(center: Vector3d, radius: f32, color: Vector3d) -> Sphere {
-        Sphere { center, radius, color }
+        Sphere { center, radius, color, roughness: 0.02 }
     }
 
     pub fn normal(&self, point: Vector3d) -> Vector3d {

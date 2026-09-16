@@ -23,6 +23,16 @@ impl Primitive {
         }
     }
 
+    pub fn roughness(&self, point: Vector3d) -> f32 {
+        //Vector3d { x: 0.5, y: 0.5, z: 0.5}
+        match self {
+            Primitive::Triangle(t) => t.roughness,
+            Primitive::Box(b) => 0.02,
+            Primitive::Sphere(s) => s.roughness,
+            Primitive::Plane(p) => 0.02,
+        }
+    }
+
     pub fn normal(&self, point: Vector3d) -> Vector3d {
         match self {
             Primitive::Triangle(t) => t.normal(),

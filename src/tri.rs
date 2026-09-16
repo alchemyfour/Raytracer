@@ -9,11 +9,12 @@ pub struct Triangle3d {
     pub b: Vector3d,
     pub c: Vector3d,
     pub color: Vector3d,
+    pub roughness: f32,
 }
 
 impl Triangle3d {
     pub fn new(a: Vector3d, b: Vector3d, c: Vector3d, color: Vector3d) -> Triangle3d {
-        Triangle3d {a, b, c, color}
+        Triangle3d {a, b, c, color, roughness: 0.02}
     }
 
     pub fn normal(&self) -> Vector3d {
