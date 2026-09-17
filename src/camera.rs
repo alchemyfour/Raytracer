@@ -139,7 +139,7 @@ impl Camera {
                         let light_dist = (light.position - intersection.location).magnitude();
                         let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness)/(light_dist/light.radius.powf(1.0));
                         lit += brightness;
-                        lit_color = lit_color + light.color/(light_dist/light.radius.powf(1.0));    
+                        lit_color = lit_color + light.color/(light_dist/light.radius.powf(1.0));
                     }
                 }
                 if lit_color == Vector3d::new(0.0, 0.0, 0.0) {
@@ -148,8 +148,8 @@ impl Camera {
                 lit_color.normalize();
                 let final_vals = ((final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)* lit);
 
-                // pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, final_vals.z * lit_color.z);
-                pixel.color = lit_color;
+                pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, final_vals.z * lit_color.z);
+                // pixel.color = lit_color;
                 // pixel.color = sky_color;
             }
         }

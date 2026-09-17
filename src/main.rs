@@ -1,3 +1,4 @@
+use std::time::Instant;
 use crate::vector3d::Sphere;
 use crate::bintree::TreeBranch;
 use crate::box3d::Box3d;
@@ -24,7 +25,8 @@ fn main() {
 
     let ground_col = Vector3d::new(0.8, 0.8, 0.8);
     let g_a = Vector3d::new(-200.0, -3.0, -100.0);
-    let g_b = Vector3d::new( 400.0, -3.0, -100.0);
+    let g_b = Vector3d::new( 400.0, -3.0, -10.0);
+    let ground_col = Vector3d::new(0.8, 0.0, 0.8);
     let g_c = Vector3d::new( 400.0, -3.0,  600.0);
     let g_d = Vector3d::new(-200.0, -3.0,  600.0);
     let mut ground1 = Triangle3d::new(g_a, g_c, g_b, ground_col);
@@ -56,8 +58,8 @@ fn main() {
     face3.roughness = 0.2;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
-    let light1 = Light::new(Vector3d::new(8.0, 15.0, 9.0), 10.0, 3.0, Vector3d::new(1.0, 0.0, 0.0));
-    let light2 = Light::new(Vector3d::new(0.0, 95.0, 27.0), 100.0, 3.0, Vector3d::new(0.0, 0.0, 1.0));
+    let light1 = Light::new(Vector3d::new(8.0, 15.0, 9.0), 40.0, 1.0, Vector3d::new(1.0, 0.9, 1.0));
+    let light2 = Light::new(Vector3d::new(0.0, 95.0, 27.0), 10.0, 1.0, Vector3d::new(0.85, 0.9, 1.0));
 
 
     let primitives = vec![
@@ -76,7 +78,10 @@ fn main() {
     let scene_box = Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
+    println!("{} total primitives", bvh.primitives.len());
+    let start_time = Instant::now();
     bvh.build();
+    println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
     let scale = 0.5;
     let lights = vec![
         light1,
@@ -93,7 +98,12 @@ fn main() {
         bvh,
         lights,
     );
+    println!("{} total lights", camera.lights.len());
+    println!("Starting trace now");
+    let trace_time = Instant::now();
     let pixels = camera.fire();
     let _ = save_png(&*pixels, "pixels.png");
+    println!("{} total pixels, finished in {} seconds", pixels.len(), trace_time.elapsed().as_millis() as f32/1000.0);
+    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 100/pixels.len())) as f32/100.0);
 }
 // we're so much cuter than this guy, we don't have a brow ridge (Referring to a skull)
