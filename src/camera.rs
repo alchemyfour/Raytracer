@@ -4,7 +4,6 @@ use crate::intersection3d::Intersection3d;
 use crate::ray::Raycast;
 use crate::pixel::Pixel;
 use crate::vector3d::{Ray3d, Vector3d};
-use rand::{random, RngExt};
 use crate::light::Light;
 
 pub struct Camera {
@@ -79,14 +78,54 @@ impl Camera {
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
-                        let intersection = Intersection3d::new(pixel.raycast.ray3d.direction, hit_point, normal, pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal, primitive.color(hit_point), primitive.metallic(hit_point));
-                        let rand: Vector3d = Vector3d::new(random::<f32>(), random::<f32>(), random::<f32>());
+                        let intersection = Intersection3d::new(
+                            pixel.raycast.ray3d.direction,
+                            hit_point,
+                            normal,
+                            pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal,
+                            primitive.color(hit_point),
+                            primitive.metallic(hit_point)
+                        );
+
+                        let hash = |mut seed: u32| -> f32 {
+                            seed ^= seed >> 16;
+                            seed = seed.wrapping_mul(0x7feb352d);
+                            seed ^= seed >> 15;
+                            seed = seed.wrapping_mul(0x846ca68b);
+                            seed ^= seed >> 16;
+                            // convert to float in range [0.0, 1.0)
+                            (seed as f32) / (u32::MAX as f32)
+                        };
+
+
+                        let x_bits = hit_point.x.to_bits();
+                        let y_bits = hit_point.y.to_bits();
+                        let z_bits = hit_point.z.to_bits();
+                        let b_bits = pixel.bounces.to_bits();
+
+
+                        let seed_base = x_bits
+                            ^ y_bits.wrapping_mul(0x9E3779B9)
+                            ^ z_bits.wrapping_mul(0x85EBCA6B)
+                            ^ b_bits.wrapping_mul(0xC2B2AE35);
+
+                        let rand: Vector3d = Vector3d::new(
+                            hash(seed_base.wrapping_add(1)),
+                            hash(seed_base.wrapping_add(2)),
+                            hash(seed_base.wrapping_add(3))
+                        );
+
                         pixel.raycast = Raycast::new(
-                            Ray3d::new(hit_point, (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand)*primitive.roughness(hit_point)),
+                            Ray3d::new(
+                                hit_point,
+                                (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand * primitive.roughness(hit_point))
+                            ),
                             pixel.raycast.bvh
                         );
+
                         pixel.intersections.push(intersection);
                         pixel.bounces += 1.0;
+
                         if pixel.bounces < 10.0 {
                             next_resolve.push(pixel);
                         } else {
@@ -95,6 +134,7 @@ impl Camera {
                     }
                 }
             }
+
             resolve = next_resolve;
             bounce_limit -= 1;
         }
