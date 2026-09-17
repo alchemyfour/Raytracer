@@ -101,8 +101,8 @@ impl Camera {
 
         // Apply background/hit coloring to the pixels in misses
 
-        for pixel in &mut misses {
-            let sky_change = 1.0;
+        for pixel in &mut misses { // This ought to be rewritten with the image class but this does work for now
+            let sky_change = 0.0;
             let sky_color = Vector3d::new(
                 (pixel.raycast.ray3d.direction.y+sky_change)*4.00_f32.clamp(0.01, 0.4),
                 (pixel.raycast.ray3d.direction.y+sky_change)*8.00_f32.clamp(0.1, 0.8),
@@ -132,16 +132,24 @@ impl Camera {
                 let metallic = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(3.0);
                 let metallic_factor = pixel.intersections[0].metallic;
                 let mut lit: f32 = 0.0;
+                let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
                 for light in self.lights.clone() {
                     for intersection in &pixel.intersections {
                         let light_dir = (light.position - intersection.location).normalize();
                         let light_dist = (light.position - intersection.location).magnitude();
                         let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness)/(light_dist/light.radius.powf(1.0));
                         lit += brightness;
+                        lit_color = lit_color + light.color/(light_dist/light.radius.powf(1.0));    
                     }
                 }
+                if lit_color == Vector3d::new(0.0, 0.0, 0.0) {
+                    lit_color = Vector3d::new(1.0, 1.0, 1.0);
+                }
+                lit_color.normalize();
+                let final_vals = ((final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)* lit);
 
-                pixel.color = (final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)*lit;
+                // pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, final_vals.z * lit_color.z);
+                pixel.color = lit_color;
                 // pixel.color = sky_color;
             }
         }

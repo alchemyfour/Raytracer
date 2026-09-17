@@ -56,7 +56,9 @@ fn main() {
     face3.roughness = 0.2;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
-    let light1 = Light::new(Vector3d::new(0.0, 15.0, 9.0), 10.0, 1.8);
+    let light1 = Light::new(Vector3d::new(8.0, 15.0, 9.0), 10.0, 3.0, Vector3d::new(1.0, 0.0, 0.0));
+    let light2 = Light::new(Vector3d::new(0.0, 95.0, 27.0), 100.0, 3.0, Vector3d::new(0.0, 0.0, 1.0));
+
 
     let primitives = vec![
         Primitive::Triangle(ground1),
@@ -78,15 +80,16 @@ fn main() {
     let scale = 0.5;
     let lights = vec![
         light1,
+        light2,
     ];
 
     let mut camera = Camera::new(
-        Vector3d::new(0.0, 0.0, -50.0),
+        Vector3d::new(0.0, 0.0, 50.0),
         50.0/0.0174533,
         60.0/0.0174533,
         4160.0 * scale,
         1440.0 * scale,
-        Vector3d::new(0.0, 0.0, 1.0),
+        Vector3d::new(0.0, 0.0, -1.0),
         bvh,
         lights,
     );
