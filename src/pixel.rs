@@ -4,6 +4,9 @@ use crate::vector3d::Vector3d;
 
 #[derive(Clone)]
 pub(crate) struct Pixel<'a> {
+    // extremely poor form to use a struct for this, every reference to an attribute requires
+    // significant pointer thrashing. This should be ported to use 2d buffers, because this will 
+    // TANK GPU performance when ported to wgpu.
     pub bounces: f32,
     pub color: Vector3d,
     pub raycast: Raycast<'a>,

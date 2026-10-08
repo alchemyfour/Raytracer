@@ -58,7 +58,7 @@ fn main() {
     face3.roughness = 0.2;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
-    let light1 = Light::new(Vector3d::new(8.0, 35.0, 9.0), 80.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
+    let light1 = Light::new(Vector3d::new(8.0, 35.0, 9.0), 30.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
     let light2 = Light::new(Vector3d::new(0.0, 95.0, 27.0), 10.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
 
 
@@ -82,19 +82,19 @@ fn main() {
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 1.0;
+    let scale = 0.1;
     let lights = vec![
         light1,
         light2,
     ];
 
     let mut camera = Camera::new(
-        Vector3d::new(0.0, 0.0, 50.0),
-        310.0*0.0174533,
-        120.0*0.0174533,
+        Vector3d::new(0.0, 0.0, -50.0),
+        330.0*0.0174533,
+        90.0*0.0174533,
         4160.0 * scale,
         1440.0 * scale,
-        Vector3d::new(0.0, 0.0, -1.0),
+        Vector3d::new(0.0, 0.0, 1.0),
         bvh,
         lights,
     );

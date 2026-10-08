@@ -86,50 +86,51 @@ impl Camera {
                             primitive.color(hit_point),
                             primitive.metallic(hit_point)
                         );
-
-                        let hash = |mut seed: u32| -> f32 {
-                            seed ^= seed >> 16;
-                            seed = seed.wrapping_mul(0x7feb352d);
-                            seed ^= seed >> 15;
-                            seed = seed.wrapping_mul(0x846ca68b);
-                            seed ^= seed >> 16;
-                            // convert to float in range [0.0, 1.0)
-                            (seed as f32) / (u32::MAX as f32)
-                        };
-
-
-                        let x_bits = hit_point.x.to_bits();
-                        let y_bits = hit_point.y.to_bits();
-                        let z_bits = hit_point.z.to_bits();
-                        let b_bits = pixel.bounces.to_bits();
+                        for i in 1..2 { // this is basically a memory leak
+                            let hash = |mut seed: u32| -> f32 {
+                                seed ^= seed >> 16;
+                                seed = seed.wrapping_mul(0x7feb352d);
+                                seed ^= seed >> 15;
+                                seed = seed.wrapping_mul(0x846ca68b);
+                                seed ^= seed >> 16;
+                                // convert to float in range [0.0, 1.0)
+                                (seed as f32) / (u32::MAX as f32)
+                            };
 
 
-                        let seed_base = x_bits
-                            ^ y_bits.wrapping_mul(0x9E3779B9)
-                            ^ z_bits.wrapping_mul(0x85EBCA6B)
-                            ^ b_bits.wrapping_mul(0xC2B2AE35);
+                            let x_bits = hit_point.x.to_bits();
+                            let y_bits = hit_point.y.to_bits();
+                            let z_bits = hit_point.z.to_bits();
+                            let b_bits = pixel.bounces.clone().to_bits();
 
-                        let rand: Vector3d = Vector3d::new(
-                            hash(seed_base.wrapping_add(1)),
-                            hash(seed_base.wrapping_add(2)),
-                            hash(seed_base.wrapping_add(3))
-                        );
 
-                        pixel.raycast = Raycast::new(
-                            Ray3d::new(
-                                hit_point,
-                                (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand * primitive.roughness(hit_point))
-                            ),
-                            pixel.raycast.bvh
-                        );
+                            let seed_base = x_bits
+                                ^ y_bits.wrapping_mul(0x9E3779B9)
+                                ^ z_bits.wrapping_mul(0x85EBCA6B)
+                                ^ b_bits.wrapping_mul(0xC2B2AE35);
 
-                        pixel.intersections.push(intersection);
-                        pixel.bounces += 1.0;
+                            let rand: Vector3d = Vector3d::new(
+                                hash(seed_base.wrapping_add(1)),
+                                hash(seed_base.wrapping_add(2)),
+                                hash(seed_base.wrapping_add(3))
+                            );
 
-                        if pixel.bounces < 10.0 {
-                            next_resolve.push(pixel);
-                        } else {
-                            misses.push(pixel);
+                            pixel.raycast = Raycast::new(
+                                Ray3d::new(
+                                    hit_point,
+                                    (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand * primitive.roughness(hit_point))
+                                ),
+                                pixel.raycast.bvh
+                            );
+
+                            pixel.intersections.push(intersection);
+                            pixel.bounces += 1.0;
+
+                            if pixel.bounces < 100.0 {
+                                next_resolve.push(pixel.clone());
+                            } else {
+                                misses.push(pixel.clone());
+                            }
                         }
                     }
                 }
@@ -188,7 +189,7 @@ impl Camera {
                 lit_color.normalize();
                 let final_vals = ((final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)* lit);
 
-                pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, final_vals.z * lit_color.z);
+                pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, ((final_vals.z * lit_color.z) * 4.0) as u32 as f32);
                 // pixel.color = lit_color;
                 // pixel.color = sky_color;
             }

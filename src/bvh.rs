@@ -61,7 +61,7 @@ impl Primitive {
         }
     }
 
-    pub fn box3d(&self) -> Box3d {
+    pub fn box3d(&self) -> Box3d { // deprecated since... A plane is just two triangles?
         match self {
             Primitive::Triangle(t) => t.box3d(),
             Primitive::Box(b) => *b,
