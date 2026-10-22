@@ -8,7 +8,6 @@ use crate::light::Light;
 use crate::png::save_png;
 use crate::tri::Triangle3d;
 use crate::vector3d::{Ray3d, Vector3d};
-
 mod vector3d;
 mod tri;
 mod box3d;
@@ -20,6 +19,7 @@ mod camera;
 mod pixel;
 mod png;
 mod light;
+mod buffer;
 
 fn main() {
 
@@ -82,7 +82,7 @@ fn main() {
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 0.1;
+    let scale = 0.4;
     let lights = vec![
         light1,
         light2,

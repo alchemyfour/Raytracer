@@ -20,3 +20,10 @@ impl Pixel<'_> {
         Pixel {raycast, x, y, color: Vector3d::new(0.0, 0.0, 0.0), intersections: Vec::new(), bounces: 0.0}
     }
 }
+// Replacement image based buffers
+/*
+- Skywards
+- Normal
+- Color
+- Metalic
+ */
