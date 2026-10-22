@@ -1,4 +1,5 @@
 use std::ops::{Add, BitXor, Mul};
+use crate::buffer::{ByteBuffer, ColorBuffer};
 use crate::bvh::BVH;
 use crate::intersection3d::Intersection3d;
 use crate::ray::Raycast;
@@ -54,35 +55,32 @@ impl Camera {
         (w + dir_x + dir_y).normalize()
     }
 
-    pub fn fire(&mut self) -> Vec<Pixel<'_>> {
-        let mut resolve = Vec::new();
-        let mut misses: Vec<Pixel> = Vec::new();
+    pub fn fire(&mut self) -> ColorBuffer {
+        let mut resolve: Vec<Raycast> = Vec::new();
+        let mut misses: Vec<Raycast> = Vec::new(); // since its a stack it resolves pixels closest first
         for x in 0..self.resolutionx as usize { // push all the raycasts to the resolve vec
             for y in 0..self.resolutiony as usize {
-                resolve.push(Pixel::new(
-                    Raycast::new( Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh),
-                    x as f32,
-                    y as f32
-                ))
+                resolve.push(Raycast::new( Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh, x, y))
             }
         }
+        let mut bounce_buffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
 
         let mut bounce_limit = 10;
         while !resolve.is_empty() && bounce_limit > 0 {
             let mut next_resolve = Vec::new();
-            for mut pixel in resolve {
-                let resolved = pixel.raycast.resolve();
+            for mut raycast in resolve {
+                let resolved = raycast.resolve();
                 match resolved {
                     None => {
-                        misses.push(pixel);
+                        misses.push(raycast);
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
                         let intersection = Intersection3d::new(
-                            pixel.raycast.ray3d.direction,
+                            raycast.ray3d.direction,
                             hit_point,
                             normal,
-                            pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal,
+                            raycast.ray3d.direction - 2.0 * (raycast.ray3d.direction.dot(normal)) * normal,
                             primitive.color(hit_point),
                             primitive.metallic(hit_point)
                         );
@@ -101,7 +99,7 @@ impl Camera {
                             let x_bits = hit_point.x.to_bits();
                             let y_bits = hit_point.y.to_bits();
                             let z_bits = hit_point.z.to_bits();
-                            let b_bits = pixel.bounces.clone().to_bits();
+                            let b_bits: u32 = 12;
 
 
                             let seed_base = x_bits
@@ -115,21 +113,23 @@ impl Camera {
                                 hash(seed_base.wrapping_add(3))
                             );
 
-                            pixel.raycast = Raycast::new(
+                            raycast = Raycast::new(
                                 Ray3d::new(
                                     hit_point,
-                                    (pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(normal)) * normal) + (rand * primitive.roughness(hit_point))
+                                    (raycast.ray3d.direction - 2.0 * (raycast.ray3d.direction.dot(normal)) * normal) + (rand * primitive.roughness(hit_point))
                                 ),
-                                pixel.raycast.bvh
+                                raycast.bvh,
+                                raycast.x,
+                                raycast.y
                             );
 
-                            pixel.intersections.push(intersection);
-                            pixel.bounces += 1.0;
+                            let current = (bounce_buffer.clone().index(raycast.x as usize, raycast.y as usize));
+                            bounce_buffer.write(raycast.x, raycast.y, current+1);
 
-                            if pixel.bounces < 100.0 {
-                                next_resolve.push(pixel.clone());
+                            if bounce_buffer.clone().index(raycast.x, raycast.y) < 100.0 as u8 {
+                                next_resolve.push(raycast.clone());
                             } else {
-                                misses.push(pixel.clone());
+                                misses.push(raycast.clone());
                             }
                         }
                     }
@@ -141,6 +141,7 @@ impl Camera {
         }
 
         // Apply background/hit coloring to the pixels in misses
+        /*
 
         for pixel in &mut misses { // This ought to be rewritten with the image class but this does work for now
             let sky_change = 0.0;
@@ -194,7 +195,11 @@ impl Camera {
                 // pixel.color = sky_color;
             }
         }
-
         misses
+         */
+
+        let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        alpha.r = bounce_buffer;
+        alpha
     }
 }

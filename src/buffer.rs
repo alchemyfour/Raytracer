@@ -1,6 +1,6 @@
-use pixels::wgpu::wgc::command::AttachmentErrorLocation::Color;
 use crate::vector3d::Vector3d;
 
+#[derive(Clone)]
 pub struct ByteBuffer {
     pub x: usize,
     pub y: usize,
