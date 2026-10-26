@@ -60,17 +60,19 @@ impl Camera {
         let mut misses: Vec<Raycast> = Vec::new(); // since its a stack it resolves pixels closest first
         for x in 0..self.resolutionx as usize { // push all the raycasts to the resolve vec
             for y in 0..self.resolutiony as usize {
-                resolve.push(Raycast::new( Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh, x, y))
+                resolve.push(Raycast::new(Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh, x, y))
             }
         }
         let mut bounce_buffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
         let mut depth_buffer: ByteBuffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
-        let mut color_buffer: ColorBuffer  = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut color_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut normal_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut reflections_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
 
         let mut bounce_limit = 10;
-        while !resolve.is_empty() && bounce_limit > 0 {
+        while !(resolve.is_empty() || bounce_limit <= 0) {
             let mut next_resolve = Vec::new();
-            for mut raycast in resolve {
+            for mut raycast in resolve.clone() {
                 let resolved = raycast.resolve();
                 match resolved {
                     None => {
@@ -124,89 +126,105 @@ impl Camera {
                                 raycast.x,
                                 raycast.y
                             );
+                            raycast.bounces += 1;
 
-                            bounce_buffer.clone().increment(raycast.x, raycast.y);
-                            (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude()/16.0) as u8);
+                            bounce_buffer.increment(raycast.x, raycast.y);
+                            (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude() / 16.0) as u8);
                             color_buffer.write(raycast.x, raycast.y, intersection.color);
+                            normal_buffer.write(raycast.x, raycast.y, intersection.normal);
 
-                            /*
-
-                            if bounce_buffer.index(raycast.x, raycast.y) < 100.0 as u8 {
-                                next_resolve.push(raycast.clone());
-                            } else {
-                                misses.push(raycast.clone());
-                            } */
+                            (&mut reflections_buffer).lerp(raycast.x, raycast.y, intersection.color, 1.0 - intersection.metallic);
+                            let mut lit = 0.0;
+                            let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
+                            for light in self.lights.clone() {
+                                let light_dir = (light.position - intersection.location).normalize();
+                                let light_dist = (light.position - intersection.location).magnitude();
+                                let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness) / (light_dist / light.radius.powf(1.0));
+                                lit += brightness;
+                                lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
+                            }
                         }
+
+                        /*
+
+                        if bounce_buffer.index(raycast.x, raycast.y) < 100.0 as u8 {
+                            next_resolve.push(raycast.clone());
+                        } else {
+                            misses.push(raycast.clone());
+                        } */
                     }
                 }
             }
+
 
             resolve = next_resolve;
             bounce_limit -= 1;
         }
 
+
         // Apply background/hit coloring to the pixels in misses
-        /*
+            /*
 
-        for pixel in &mut misses { // This ought to be rewritten with the image class but this does work for now
-            let sky_change = 0.0;
-            let sky_color = Vector3d::new(
-                (pixel.raycast.ray3d.direction.y+sky_change)*4.00_f32.clamp(0.01, 0.4),
-                (pixel.raycast.ray3d.direction.y+sky_change)*8.00_f32.clamp(0.1, 0.8),
-                (pixel.raycast.ray3d.direction.y+sky_change)*12.0_f32.clamp(0.1, 0.98)
-            );
-            if pixel.intersections.is_empty() {
-                pixel.color = sky_color
-                // skycolor formula
-            } else {
-                // take the final bounce and figure out how much it pointed skywards
-                let sky_factor = pixel.raycast.ray3d.direction.y;
-                let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
-                let mut brightness: f32 = 1.0;
-                    for intersection in &pixel.intersections {
-                        basecolor = intersection.color + basecolor;
-                        brightness = brightness * intersection.color.magnitude();
+            for pixel in &mut misses { // This ought to be rewritten with the image class but this does work for now
+                let sky_change = 0.0;
+                let sky_color = Vector3d::new(
+                    (pixel.raycast.ray3d.direction.y+sky_change)*4.00_f32.clamp(0.01, 0.4),
+                    (pixel.raycast.ray3d.direction.y+sky_change)*8.00_f32.clamp(0.1, 0.8),
+                    (pixel.raycast.ray3d.direction.y+sky_change)*12.0_f32.clamp(0.1, 0.98)
+                );
+                if pixel.intersections.is_empty() {
+                    pixel.color = sky_color
+                    // skycolor formula
+                } else {
+                    // take the final bounce and figure out how much it pointed skywards
+                    let sky_factor = pixel.raycast.ray3d.direction.y;
+                    let mut basecolor = Vector3d::new(0.0, 0.0, 0.0);
+                    let mut brightness: f32 = 1.0;
+                        for intersection in &pixel.intersections {
+                            basecolor = intersection.color + basecolor;
+                            brightness = brightness * intersection.color.magnitude();
 
-                }
-                let reflection_color = (basecolor+sky_color*sky_factor*1.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*1.0);
-                let albedo: Vector3d = (pixel.intersections[0].color);
-                // let cheap_lit: Vector3d = Vector3d::new(pixel.intersections[0].color.x + pixel.intersections[0].normal.x, pixel.intersections[0].color.y + pixel.intersections[0].normal.x, pixel.intersections[0].color.z + pixel.intersections[0].normal.x);
-                let cheap_lit = Vector3d::new(pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y);
-                let reflections: Vector3d = Vector3d::new(pixel.bounces - 1.0, pixel.bounces - 1.0, pixel.bounces - 1.0);
-                let final_lerp = sky_factor;
-                let final_color = (albedo*(pixel.intersections[0].normal.y+1.0)/2.0);
-                let specular = ((pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(pixel.intersections[0].normal)) * pixel.intersections[0].normal).dot(self.dir));
-                let metallic = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(3.0);
-                let metallic_factor = pixel.intersections[0].metallic;
-                let mut lit: f32 = 0.0;
-                let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
-                for light in self.lights.clone() {
-                    for intersection in &pixel.intersections {
-                        let light_dir = (light.position - intersection.location).normalize();
-                        let light_dist = (light.position - intersection.location).magnitude();
-                        let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness)/(light_dist/light.radius.powf(1.0));
-                        lit += brightness;
-                        lit_color = lit_color + light.color/(light_dist/light.radius.powf(1.0));
                     }
-                }
-                if lit_color == Vector3d::new(0.0, 0.0, 0.0) {
-                    lit_color = Vector3d::new(1.0, 1.0, 1.0);
-                }
-                lit_color.normalize();
-                let final_vals = ((final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)* lit);
+                    let reflection_color = (basecolor+sky_color*sky_factor*1.0)/(pixel.intersections.len() as f32+(1.0/sky_factor)*1.0);
+                    let albedo: Vector3d = (pixel.intersections[0].color);
+                    // let cheap_lit: Vector3d = Vector3d::new(pixel.intersections[0].color.x + pixel.intersections[0].normal.x, pixel.intersections[0].color.y + pixel.intersections[0].normal.x, pixel.intersections[0].color.z + pixel.intersections[0].normal.x);
+                    let cheap_lit = Vector3d::new(pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y, pixel.raycast.ray3d.direction.y);
+                    let reflections: Vector3d = Vector3d::new(pixel.bounces - 1.0, pixel.bounces - 1.0, pixel.bounces - 1.0);
+                    let final_lerp = sky_factor;
+                    let final_color = (albedo*(pixel.intersections[0].normal.y+1.0)/2.0);
+                    let specular = ((pixel.raycast.ray3d.direction - 2.0 * (pixel.raycast.ray3d.direction.dot(pixel.intersections[0].normal)) * pixel.intersections[0].normal).dot(self.dir));
+                    let metallic = (((basecolor*sky_factor.clamp(0.2,1.0))+sky_color*0.5)/(pixel.bounces + 0.01)) * specular.powf(3.0);
+                    let metallic_factor = pixel.intersections[0].metallic;
+                    let mut lit: f32 = 0.0;
+                    let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
+                    for light in self.lights.clone() {
+                        for intersection in &pixel.intersections {
+                            let light_dir = (light.position - intersection.location).normalize();
+                            let light_dist = (light.position - intersection.location).magnitude();
+                            let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness)/(light_dist/light.radius.powf(1.0));
+                            lit += brightness;
+                            lit_color = lit_color + light.color/(light_dist/light.radius.powf(1.0));
+                        }
+                    }
+                    if lit_color == Vector3d::new(0.0, 0.0, 0.0) {
+                        lit_color = Vector3d::new(1.0, 1.0, 1.0);
+                    }
+                    lit_color.normalize();
+                    let final_vals = ((final_color*specular.clamp(0.01, 1.0) * (1.0 - metallic_factor) + metallic * metallic_factor)* lit);
 
-                pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, ((final_vals.z * lit_color.z) * 4.0) as u32 as f32);
-                // pixel.color = lit_color;
-                // pixel.color = sky_color;
+                    pixel.color = Vector3d::new(final_vals.x * lit_color.x, final_vals.y * lit_color.y, ((final_vals.z * lit_color.z) * 4.0) as u32 as f32);
+                    // pixel.color = lit_color;
+                    // pixel.color = sky_color;
+                }
             }
-        }
-        misses
-         */
+            misses
+             */
 
-        let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+            let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
 
-        alpha.r = bounce_buffer.clone();
-        alpha.b = depth_buffer.clone();
-        color_buffer
+            alpha.r = bounce_buffer.clone();
+            alpha.b = depth_buffer.clone();
+            reflections_buffer
+
     }
 }
