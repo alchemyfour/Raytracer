@@ -11,8 +11,8 @@ pub struct Camera {
     origin: Vector3d,
     fovy: f32,
     fovx: f32,
-    resolutionx: f32,
-    resolutiony: f32,
+    pub(crate) resolutionx: f32,
+    pub(crate) resolutiony: f32,
     dir: Vector3d,
     bvh: BVH,
     pub lights: Vec<Light>
@@ -64,6 +64,8 @@ impl Camera {
             }
         }
         let mut bounce_buffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut depth_buffer: ByteBuffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut color_buffer: ColorBuffer  = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
 
         let mut bounce_limit = 10;
         while !resolve.is_empty() && bounce_limit > 0 {
@@ -123,14 +125,17 @@ impl Camera {
                                 raycast.y
                             );
 
-                            let current = (bounce_buffer.clone().index(raycast.x as usize, raycast.y as usize));
-                            bounce_buffer.write(raycast.x, raycast.y, current+1);
+                            bounce_buffer.clone().increment(raycast.x, raycast.y);
+                            (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude()/16.0) as u8);
+                            color_buffer.write(raycast.x, raycast.y, intersection.color);
 
-                            if bounce_buffer.clone().index(raycast.x, raycast.y) < 100.0 as u8 {
+                            /*
+
+                            if bounce_buffer.index(raycast.x, raycast.y) < 100.0 as u8 {
                                 next_resolve.push(raycast.clone());
                             } else {
                                 misses.push(raycast.clone());
-                            }
+                            } */
                         }
                     }
                 }
@@ -199,7 +204,9 @@ impl Camera {
          */
 
         let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
-        alpha.r = bounce_buffer;
-        alpha
+
+        alpha.r = bounce_buffer.clone();
+        alpha.b = depth_buffer.clone();
+        color_buffer
     }
 }

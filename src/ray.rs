@@ -6,6 +6,8 @@ use crate::bintree::TreeBranch;
 pub struct Raycast<'a> {
     pub ray3d: Ray3d,
     pub bvh: &'a BVH,
+    pub x: usize,
+    pub y: usize,
 }
 
 pub enum Resolvable<'a> {
@@ -84,8 +86,8 @@ impl<'a> Resolvable<'a> {
 }
 
 impl<'a> Raycast<'a> {
-    pub fn new(ray3d: Ray3d, bvh: &'a BVH) -> Self {
-        Raycast { ray3d, bvh }
+    pub fn new(ray3d: Ray3d, bvh: &'a BVH, x: usize, y: usize) -> Self {
+        Raycast { ray3d, bvh, x, y }
     }
 
     pub fn resolve(self: Raycast<'a>) -> Option<(Vector3d, &'a Primitive)> {

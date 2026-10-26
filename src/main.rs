@@ -102,8 +102,8 @@ fn main() {
     println!("Starting trace now");
     let trace_time = Instant::now();
     let pixels = camera.fire();
-    let _ = save_png(&*pixels, "pixels.png");
-    println!("{} total pixels, finished in {} seconds", pixels.len(), trace_time.elapsed().as_millis() as f32/1000.0);
-    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 100/pixels.len())) as f32/100.0);
+    let _ = save_png(&pixels, "traced_your_rays.png");
+    println!("{} total pixels, finished in {} seconds", camera.resolutionx*camera.resolutiony, trace_time.elapsed().as_millis() as f32/1000.0);
+    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/camera.resolutionx*camera.resolutiony);
 }
 // we're so much cuter than this guy, we don't have a brow ridge (Referring to a skull)
