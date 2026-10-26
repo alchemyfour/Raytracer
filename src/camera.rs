@@ -130,7 +130,7 @@ impl Camera {
 
                             bounce_buffer.increment(raycast.x, raycast.y);
                             (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude() / 16.0) as u8);
-                            color_buffer.write(raycast.x, raycast.y, intersection.color);
+
                             normal_buffer.write(raycast.x, raycast.y, intersection.normal);
 
                             (&mut reflections_buffer).lerp(raycast.x, raycast.y, intersection.color, 1.0 - intersection.metallic);
@@ -143,6 +143,7 @@ impl Camera {
                                 lit += brightness;
                                 lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
                             }
+                            color_buffer.write(raycast.x, raycast.y, intersection.color*lit);
                         }
 
                         /*
@@ -224,7 +225,7 @@ impl Camera {
 
             alpha.r = bounce_buffer.clone();
             alpha.b = depth_buffer.clone();
-            reflections_buffer
+           color_buffer
 
     }
 }
