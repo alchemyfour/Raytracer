@@ -82,7 +82,7 @@ fn main() {
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 0.1;
+    let scale = 0.4;
     let lights = vec![
         light1,
         light2,

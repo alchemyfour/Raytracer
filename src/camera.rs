@@ -60,7 +60,7 @@ impl Camera {
         let mut misses: Vec<Raycast> = Vec::new(); // since its a stack it resolves pixels closest first
         for x in 0..self.resolutionx as usize { // push all the raycasts to the resolve vec
             for y in 0..self.resolutiony as usize {
-                resolve.push(Raycast::new(Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh, x, y))
+                resolve.push(Raycast::new(Ray3d::new(self.origin, self.ray_direction(x as f32, y as f32)), &self.bvh, x, y, 0))
             }
         }
         let mut bounce_buffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
@@ -124,27 +124,44 @@ impl Camera {
                                 ),
                                 raycast.bvh,
                                 raycast.x,
-                                raycast.y
+                                raycast.y,
+                                raycast.bounces + 1
                             );
-                            raycast.bounces += 1;
 
                             bounce_buffer.increment(raycast.x, raycast.y);
                             (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude() / 16.0) as u8);
 
                             normal_buffer.write(raycast.x, raycast.y, intersection.normal);
 
-                            (&mut reflections_buffer).lerp(raycast.x, raycast.y, intersection.color, 1.0 - intersection.metallic);
+                            (&mut reflections_buffer).lerp(raycast.x, raycast.y, intersection.color, 0.0);
                             let mut lit = 0.0;
                             let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
                             for light in self.lights.clone() {
                                 let light_dir = (light.position - intersection.location).normalize();
                                 let light_dist = (light.position - intersection.location).magnitude();
                                 let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness) / (light_dist / light.radius.powf(1.0));
-                                lit += brightness;
-                                lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
+                                let check = Raycast::new(Ray3d::new(intersection.location + light_dir, light_dir), raycast.bvh, raycast.x, raycast.y, 0); //I'm so proud of this completely janky and inadvisable fix
+                                let checked = check.resolve();
+                                if checked.is_none() {
+                                    lit += brightness;
+                                    lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
+
+                                }
+                                else if (checked.unwrap().0 - intersection.location).magnitude() > light_dist + 0.1 {
+                                    lit += brightness;
+                                    lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
+
+                                }
                             }
-                            color_buffer.write(raycast.x, raycast.y, intersection.color*lit);
+                            if raycast.bounces <= 1 {
+                                color_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, 1.0);
+
+                            }
+                            else if raycast.bounces >=2 {
+                                reflections_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, (1.0/raycast.bounces as f32));
+                            }
                         }
+                        next_resolve.push(raycast.clone());
 
                         /*
 
@@ -225,7 +242,7 @@ impl Camera {
 
             alpha.r = bounce_buffer.clone();
             alpha.b = depth_buffer.clone();
-           color_buffer
+            reflections_buffer
 
     }
 }

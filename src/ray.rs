@@ -87,8 +87,8 @@ impl<'a> Resolvable<'a> {
 }
 
 impl<'a> Raycast<'a> {
-    pub fn new(ray3d: Ray3d, bvh: &'a BVH, x: usize, y: usize) -> Self {
-        Raycast { ray3d, bvh, x, y, bounces: 0}
+    pub fn new(ray3d: Ray3d, bvh: &'a BVH, x: usize, y: usize, bounces: u8) -> Self {
+        Raycast { ray3d, bvh, x, y, bounces}
     }
 
     pub fn resolve(self: Raycast<'a>) -> Option<(Vector3d, &'a Primitive)> {
