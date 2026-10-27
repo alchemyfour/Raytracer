@@ -88,7 +88,7 @@ impl Camera {
                             primitive.color(hit_point),
                             primitive.metallic(hit_point)
                         );
-                        for i in 1..2 { // this is basically a memory leak
+                        for i in 1..2 { // this is basically a memory leak don't increase this
                             let hash = |mut seed: u32| -> f32 {
                                 seed ^= seed >> 16;
                                 seed = seed.wrapping_mul(0x7feb352d);
@@ -154,7 +154,7 @@ impl Camera {
                                 }
                             }
                             if raycast.bounces <= 1 {
-                                color_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, 1.0);
+                                color_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, 0.5);
 
                             }
                             else if raycast.bounces >=2 {

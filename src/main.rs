@@ -102,7 +102,7 @@ fn main() {
     println!("Starting trace now");
     let trace_time = Instant::now();
     let pixels = camera.fire();
-    let _ = save_png(&pixels, "traced_your_rays.png");
+    let _ = save_png(&pixels, "reflections.png");
     println!("{} total pixels, finished in {} seconds", camera.resolutionx*camera.resolutiony, trace_time.elapsed().as_millis() as f32/1000.0);
     println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/camera.resolutionx*camera.resolutiony);
 }
