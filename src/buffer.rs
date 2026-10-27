@@ -63,8 +63,8 @@ impl ColorBuffer {
     }
 
     pub fn lerp(&mut self, x: usize, y: usize, val: Vector3d, factor: f32) {
-        self.r.write(x, y, ((val.x.clamp(0.0, 1.0) * 255.0)*factor+(self.r.index(x, y) as f32)*(1.0-factor)) as u8);
-        self.g.write(x, y, ((val.y.clamp(0.0, 1.0) * 255.0)*factor+(self.g.index(x, y) as f32)*(1.0-factor)) as u8);
-        self.b.write(x, y, ((val.z.clamp(0.0, 1.0) * 255.0)*factor+(self.b.index(x, y) as f32)*(1.0-factor)) as u8);
+        self.r.write(x, y, (((val.x.clamp(0.0, 1.0) * 256.0) * self.r.index(x, y) as f32 * factor)/65536.0+(self.r.index(x, y) as f32)*(1.0-factor)) as u8);
+        self.g.write(x, y, (((val.y.clamp(0.0, 1.0) * 256.0) * self.g.index(x, y) as f32 * factor)/65536.0+(self.g.index(x, y) as f32)*(1.0-factor)) as u8);
+        self.b.write(x, y, (((val.z.clamp(0.0, 1.0) * 256.0) * self.b.index(x, y) as f32 * factor)/65536.0+(self.b.index(x, y) as f32)*(1.0-factor)) as u8);
     }
 }

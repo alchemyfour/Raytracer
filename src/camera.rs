@@ -1,4 +1,5 @@
 use std::ops::{Add, BitXor, Mul};
+use png::ColorType;
 use crate::buffer::{ByteBuffer, ColorBuffer};
 use crate::bvh::BVH;
 use crate::intersection3d::Intersection3d;
@@ -55,7 +56,7 @@ impl Camera {
         (w + dir_x + dir_y).normalize()
     }
 
-    pub fn fire(&mut self) -> ColorBuffer {
+    pub fn fire(&mut self, seed: u32) -> ColorBuffer {
         let mut resolve: Vec<Raycast> = Vec::new();
         let mut misses: Vec<Raycast> = Vec::new(); // since its a stack it resolves pixels closest first
         for x in 0..self.resolutionx as usize { // push all the raycasts to the resolve vec
@@ -65,6 +66,7 @@ impl Camera {
         }
         let mut bounce_buffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
         let mut depth_buffer: ByteBuffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        let mut metallic_buffer: ByteBuffer = ByteBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
         let mut color_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
         let mut normal_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
         let mut reflections_buffer: ColorBuffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
@@ -77,6 +79,9 @@ impl Camera {
                 match resolved {
                     None => {
                         misses.push(raycast);
+                        if raycast.bounces == 0 {
+                            color_buffer.write(raycast.x, raycast.y, Vector3d::new(0.7, 0.8, 1.0));
+                        }
                     }
                     Some((hit_point, primitive)) => {
                         let normal = primitive.normal(hit_point);
@@ -103,7 +108,7 @@ impl Camera {
                             let x_bits = hit_point.x.to_bits();
                             let y_bits = hit_point.y.to_bits();
                             let z_bits = hit_point.z.to_bits();
-                            let b_bits: u32 = 12;
+                            let b_bits: u32 = seed;
 
 
                             let seed_base = x_bits
@@ -132,13 +137,14 @@ impl Camera {
                             (&mut depth_buffer).write(raycast.x, raycast.y, ((intersection.location - self.origin).magnitude() / 16.0) as u8);
 
                             normal_buffer.write(raycast.x, raycast.y, intersection.normal);
+                            metallic_buffer.write(raycast.x, raycast.y, (primitive.metallic(hit_point) * 256.0) as u8);
 
                             (&mut reflections_buffer).lerp(raycast.x, raycast.y, intersection.color, 0.0);
-                            let mut lit = 0.0;
+                            let mut lit = 0.1;
                             let mut lit_color = Vector3d::new(0.0, 0.0, 0.0);
                             for light in self.lights.clone() {
                                 let light_dir = (light.position - intersection.location).normalize();
-                                let light_dist = (light.position - intersection.location).magnitude();
+                                let light_dist = (light.position - intfireersection.location).magnitude();
                                 let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness) / (light_dist / light.radius.powf(1.0));
                                 let check = Raycast::new(Ray3d::new(intersection.location + light_dir, light_dir), raycast.bvh, raycast.x, raycast.y, 0); //I'm so proud of this completely janky and inadvisable fix
                                 let checked = check.resolve();
@@ -154,11 +160,11 @@ impl Camera {
                                 }
                             }
                             if raycast.bounces <= 1 {
-                                color_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, 1.0);
+                                color_buffer.write(raycast.x, raycast.y, intersection.color * lit);
 
                             }
                             else if raycast.bounces >=2 {
-                                reflections_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, (1.0/raycast.bounces as f32));
+                                color_buffer.lerp(raycast.x, raycast.y, intersection.color * lit, primitive.metallic(hit_point)/raycast.bounces as f32);
                             }
                         }
                         next_resolve.push(raycast.clone());
@@ -237,12 +243,42 @@ impl Camera {
             }
             misses
              */
+        let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
 
-            let mut alpha = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        alpha.r = bounce_buffer.clone();
+        alpha.b = depth_buffer.clone();
+        let mut final_buffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        for x in 0..self.resolutionx as usize {
+            for y in 0..self.resolutiony as usize {
+                let shaded_color = color_buffer.index(x, y);
+                let reflection_color = reflections_buffer.index(x, y);
 
-            alpha.r = bounce_buffer.clone();
-            alpha.b = depth_buffer.clone();
-            reflections_buffer
+                let reflection_brightness = metallic_buffer.index(x, y) as f32/256.0; // root 3, ensures brightness can be max 1
+                //final_buffer.write(x, y, shaded_color*(1.0 - reflection_brightness)+(((reflection_color)*reflection_brightness)));
+                //final_buffer.write(x, y, Vector3d::new(metallic_buffer.index(x, y) as f32/512.0, 0.0, 0.0));
+            }
+        }
+        color_buffer
 
+
+    }
+    pub fn render(&mut self, passes: u8) -> ColorBuffer {
+        let mut renders: Vec<ColorBuffer> = Vec::new();
+        for pass in 0..passes {
+            renders.push(self.fire(pass as u32));
+        };
+        let mut final_buffer = ColorBuffer::new(self.resolutionx as usize, self.resolutiony as usize);
+        for x in 0..self.resolutionx as usize {
+            for y in 0..self.resolutiony as usize {
+                let mut sum = renders[0].index(x, y);
+                for pass in 1..passes{
+                    sum = sum + (renders[pass as usize]).index(x, y);
+
+                }
+                sum = sum / passes as f32;
+                final_buffer.write(x, y, sum);
+            }
+        }
+        final_buffer
     }
 }
