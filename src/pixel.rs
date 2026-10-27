@@ -15,7 +15,7 @@ pub(crate) struct Pixel<'a> {
     pub y: f32,
 }
 
-impl Pixel<'_> {
+impl Pixel<'_> { // DEPRECATED, UNUSED. ONLY HERE FOR FUTURE REFERENCE 
     pub(crate) fn new(raycast: Raycast, x: f32, y: f32) -> Pixel {
         Pixel {raycast, x, y, color: Vector3d::new(0.0, 0.0, 0.0), intersections: Vec::new(), bounces: 0.0}
     }
