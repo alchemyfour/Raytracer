@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::buffer::ColorBuffer;
 
 const IMPULSE_THRESHOLD: f32 = 0.02;
-const BLUR_SIGMA: f32 = 1.3;
+const BLUR_SIGMA: f32 = 0.8;
 
 
 

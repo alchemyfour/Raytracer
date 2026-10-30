@@ -63,8 +63,18 @@ impl ColorBuffer {
     }
 
     pub fn lerp(&mut self, x: usize, y: usize, val: Vector3d, factor: f32) {
-        self.r.write(x, y, (((val.x.clamp(0.0, 1.0) * 256.0) * self.r.index(x, y) as f32 * factor)/65536.0+(self.r.index(x, y) as f32)*(1.0-factor)) as u8);
-        self.g.write(x, y, (((val.y.clamp(0.0, 1.0) * 256.0) * self.g.index(x, y) as f32 * factor)/65536.0+(self.g.index(x, y) as f32)*(1.0-factor)) as u8);
-        self.b.write(x, y, (((val.z.clamp(0.0, 1.0) * 256.0) * self.b.index(x, y) as f32 * factor)/65536.0+(self.b.index(x, y) as f32)*(1.0-factor)) as u8);
+        let target_r = (val.x.clamp(0.0, 1.0) * 255.0);
+        let target_g = val.y.clamp(0.0, 1.0) * 255.0;
+        let target_b = val.z.clamp(0.0, 1.0) * 255.0;
+
+        let current_r = self.r.index(x, y) as f32;
+        let current_g = self.g.index(x, y) as f32;
+        let current_b = self.b.index(x, y) as f32;
+
+        let current_value = self.index(x, y).magnitude();
+
+        self.r.write(x, y, (current_r * (1.0 - factor) + target_r * factor * current_value) as u8);
+        self.g.write(x, y, (current_g * (1.0 - factor) + target_g * factor * current_value) as u8);
+        self.b.write(x, y, (current_b * (1.0 - factor) + target_b * factor * current_value) as u8);
     }
 }

@@ -209,8 +209,8 @@ impl BVH {
         Self::build_node(&mut left_branch, threshold);
         Self::build_node(&mut right_branch, threshold);
 
-        node.left = Some(Box::new(left_branch) as Box<dyn std::any::Any>);
-        node.right = Some(Box::new(right_branch) as Box<dyn std::any::Any>);
+        node.left = Some(Box::new(left_branch) as Box<dyn std::any::Any + Send + Sync>);
+        node.right = Some(Box::new(right_branch) as Box<dyn std::any::Any + Send + Sync>);
 
         node.data.primitives = None;
     }

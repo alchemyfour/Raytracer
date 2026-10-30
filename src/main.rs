@@ -45,17 +45,17 @@ fn main() {
     let mut sphere_light: Sphere = Sphere::new(Vector3d::new(-15.0, 10.0, 30.0), 10.0, Vector3d::new(1.0, 1.0, 1.0));
     sphere_light.metallic = 1.0;
 
-    let p0   = Vector3d::new( 5.0, -3.0, 20.0);
-    let p1   = Vector3d::new(11.0, -3.0, 20.0);
-    let p2   = Vector3d::new( 8.0, -3.0, 25.0);
-    let apex = Vector3d::new( 8.0,  1.5, 21.7);
+    let p0   = Vector3d::new( 5.0, -3.0, 60.0);
+    let p1   = Vector3d::new(22.0, -3.0, 60.0);
+    let p2   = Vector3d::new( 16.0, -3.0, 65.0);
+    let apex = Vector3d::new( 16.0,  20.5, 60.0);
     let gold = Vector3d::new(0.9, 0.7, 0.1);
     let mut face1 = Triangle3d::new(p0, p1, apex, gold);
-    face1.roughness = 0.2;
+    face1.roughness = 0.01;
     let mut face2 = Triangle3d::new(p1, p2, apex, gold);
-    face2.roughness = 0.2;
+    face2.roughness = 0.01;
     let mut face3 = Triangle3d::new(p2, p0, apex, gold);
-    face3.roughness = 0.2;
+    face3.roughness = 0.01;
     let base  = Triangle3d::new(p0, p2, p1, gold);
 
     let light1 = Light::new(Vector3d::new(8.0, 35.0, 9.0), 30.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
@@ -82,7 +82,7 @@ fn main() {
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 0.4;
+    let scale = 1.0;
     let lights = vec![
         light1,
         light2,
@@ -101,9 +101,9 @@ fn main() {
     println!("{} total lights", camera.lights.len());
     println!("Starting trace now");
     let trace_time = Instant::now();
-    let pixels = camera.fire();
-    let _ = save_png(&pixels, "traced_your_rays.png");
+    let pixels = camera.render(100);
+    let _ = save_png(&pixels, "render.png");
     println!("{} total pixels, finished in {} seconds", camera.resolutionx*camera.resolutiony, trace_time.elapsed().as_millis() as f32/1000.0);
-    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/camera.resolutionx*camera.resolutiony);
+    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/(camera.resolutionx*camera.resolutiony));
 }
 // we're so much cuter than this guy, we don't have a brow ridge (Referring to a skull)

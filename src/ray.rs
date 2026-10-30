@@ -9,6 +9,7 @@ pub struct Raycast<'a> {
     pub x: usize,
     pub y: usize,
     pub bounces: u8,
+    pub metallic: f32,
 }
 
 pub enum Resolvable<'a> {
@@ -87,8 +88,8 @@ impl<'a> Resolvable<'a> {
 }
 
 impl<'a> Raycast<'a> {
-    pub fn new(ray3d: Ray3d, bvh: &'a BVH, x: usize, y: usize, bounces: u8) -> Self {
-        Raycast { ray3d, bvh, x, y, bounces}
+    pub fn new(ray3d: Ray3d, bvh: &'a BVH, x: usize, y: usize, bounces: u8, metallic: f32) -> Self {
+        Raycast { ray3d, bvh, x, y, bounces, metallic }
     }
 
     pub fn resolve(self: Raycast<'a>) -> Option<(Vector3d, &'a Primitive)> {

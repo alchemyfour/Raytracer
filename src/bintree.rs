@@ -2,8 +2,8 @@ use std::any::Any;
 use crate::bvh::{BV, BVH};
 
 pub struct TreeBranch {
-    pub left: Option<Box<dyn Any>>,
-    pub right: Option<Box<dyn Any>>,
+    pub left: Option<Box<dyn Any + Send + Sync>>,
+    pub right: Option<Box<dyn Any + Send + Sync>>,
     pub parent: Option<Box<TreeBranch>>,
     pub data: BV
 }
