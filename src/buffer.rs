@@ -7,6 +7,12 @@ pub struct ByteBuffer {
     pub elements: Vec<u8>,
 }
 
+pub struct BitBuffer {
+    pub x: usize,
+    pub y: usize,
+    pub elements: Vec<bool>,
+}
+
 impl ByteBuffer {
     pub fn new(x: usize, y: usize) -> ByteBuffer {
         let zeros = vec![0u8; x * y];
@@ -23,9 +29,34 @@ impl ByteBuffer {
         self.elements[y * self.x + x] = value;
     }
 
+    pub fn lerp(&mut self, x: usize, y: usize, value: u8, factor: f32) {
+        let final_value = (value as f32 * factor) + (self.index(x, y) as f32)*(1.0 - factor);
+        self.write(x, y, final_value as u8)
+    }
+
     pub fn increment(&mut self, x: usize, y: usize) {
         let idx = y * self.x + x;
         self.elements[idx] = self.elements[idx].wrapping_add(1);
+    }
+}
+
+impl BitBuffer {
+    pub fn new(x: usize, y: usize) -> BitBuffer {
+        let zeros = vec![false; x * y];
+        BitBuffer { x, y, elements: zeros }
+    }
+
+    pub fn index(&self, x: usize, y: usize) -> bool {
+        self.elements[y * self.x + x]
+    }
+
+    pub fn write(&mut self, x: usize, y: usize, value: bool) {
+        self.elements[y * self.x + x] = value;
+    }
+
+    pub fn flip(&mut self, x: usize, y: usize) {
+        let idx = y * self.x + x;
+        self.elements[idx] = !(self.elements[idx]);
     }
 }
 

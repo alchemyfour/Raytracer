@@ -82,7 +82,7 @@ fn main() {
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 1.0;
+    let scale = 0.2;
     let lights = vec![
         light1,
         light2,
@@ -101,7 +101,8 @@ fn main() {
     println!("{} total lights", camera.lights.len());
     println!("Starting trace now");
     let trace_time = Instant::now();
-    let pixels = camera.render(100);
+    //let pixels = camera.render(10);
+    let pixels = camera.lazy_fire(10);
     let _ = save_png(&pixels, "render.png");
     println!("{} total pixels, finished in {} seconds", camera.resolutionx*camera.resolutiony, trace_time.elapsed().as_millis() as f32/1000.0);
     println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/(camera.resolutionx*camera.resolutiony));
