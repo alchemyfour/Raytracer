@@ -22,89 +22,140 @@ mod light;
 mod buffer;
 
 fn main() {
+    // --- Cornell Box Materials ---
+    let white = Vector3d::new(0.73, 0.73, 0.73);
+    let red   = Vector3d::new(0.65, 0.45, 0.05);
+    let green = Vector3d::new(0.32, 0.45, 0.15);
 
-    let ground_col = Vector3d::new(0.8, 0.8, 0.8);
-    let g_a = Vector3d::new(-200.0, -3.0, -100.0);
-    let g_b = Vector3d::new( 400.0, -3.0, -10.0);
-    let ground_col = Vector3d::new(0.8, 0.8, 0.8);
-    let g_c = Vector3d::new( 400.0, -3.0,  600.0);
-    let g_d = Vector3d::new(-200.0, -3.0,  600.0);
-    let mut ground1 = Triangle3d::new(g_a, g_c, g_b, ground_col);
-    let mut ground2 = Triangle3d::new(g_a, g_d, g_c, ground_col);
-    ground1.roughness = 1.0;
-    ground2.roughness = 1.0;
+    // --- Room Vertices ---
+    let v_f0 = Vector3d::new(-10.0,  0.0,  0.0);
+    let v_f1 = Vector3d::new( 10.0,  0.0,  0.0);
+    let v_f2 = Vector3d::new( 10.0,  0.0, 20.0);
+    let v_f3 = Vector3d::new(-10.0,  0.0, 20.0);
 
-    let mut sphere1 = Sphere::new(Vector3d::new( 2.0,  0.0, 18.0), 3.0, Vector3d::new(0.1, 0.6, 0.2));
-    let mut sphere2 = Sphere::new(Vector3d::new(14.0,  1.0, 27.0), 4.0, Vector3d::new(0.7, 0.15, 0.15));
-    let mut sphere3 = Sphere::new(Vector3d::new(-3.0, -1.0, 12.0), 2.0, Vector3d::new(0.2, 0.3, 0.8));
-    sphere1.roughness = 0.05;
-    sphere2.roughness = 0.5;
-    sphere3.roughness = 0.9;
-    sphere2.metallic = 0.0;
+    let v_c0 = Vector3d::new(-10.0, 20.0,  0.0);
+    let v_c1 = Vector3d::new( 10.0, 20.0,  0.0);
+    let v_c2 = Vector3d::new( 10.0, 20.0, 20.0);
+    let v_c3 = Vector3d::new(-10.0, 20.0, 20.0);
 
-    let mut sphere_light: Sphere = Sphere::new(Vector3d::new(-15.0, 10.0, 30.0), 10.0, Vector3d::new(1.0, 1.0, 1.0));
-    sphere_light.metallic = 1.0;
+    let mut primitives = Vec::new();
 
-    let p0   = Vector3d::new( 5.0, -3.0, 60.0);
-    let p1   = Vector3d::new(22.0, -3.0, 60.0);
-    let p2   = Vector3d::new( 16.0, -3.0, 65.0);
-    let apex = Vector3d::new( 16.0,  20.5, 60.0);
-    let gold = Vector3d::new(0.9, 0.7, 0.1);
-    let mut face1 = Triangle3d::new(p0, p1, apex, gold);
-    face1.roughness = 0.01;
-    let mut face2 = Triangle3d::new(p1, p2, apex, gold);
-    face2.roughness = 0.01;
-    let mut face3 = Triangle3d::new(p2, p0, apex, gold);
-    face3.roughness = 0.01;
-    let base  = Triangle3d::new(p0, p2, p1, gold);
+    // Floor (White)
+    // --- Room Walls & Roughness Control ---
+    let wall_roughness = 0.2; 
+    // Helper closure to quickly instantiate and push walls with the target roughness
+    let mut push_wall = |a: Vector3d, b: Vector3d, c: Vector3d, col: Vector3d| {
+        let mut tri = Triangle3d::new(a, b, c, col);
+        tri.roughness = wall_roughness;
+        tri.metallic = 0.2;
+        primitives.push(Primitive::Triangle(tri));
+    };
 
-    let light1 = Light::new(Vector3d::new(8.0, 35.0, 9.0), 30.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
-    let light2 = Light::new(Vector3d::new(0.0, 95.0, 27.0), 10.0, 1.0, Vector3d::new(1.0, 1.0, 1.0));
+    // Floor (White)
+    push_wall(v_f0, v_f1, v_f2, white);
+    push_wall(v_f0, v_f2, v_f3, white);
 
+    // Ceiling (White)
+    push_wall(v_c0, v_c2, v_c1, white);
+    push_wall(v_c0, v_c3, v_c2, white);
 
-    let primitives = vec![
-        Primitive::Triangle(ground1),
-        Primitive::Triangle(ground2),
-        Primitive::Triangle(face1),
-        Primitive::Triangle(face2),
-        Primitive::Triangle(face3),
-        Primitive::Triangle(base),
-        Primitive::Sphere(sphere1),
-        Primitive::Sphere(sphere2),
-        Primitive::Sphere(sphere3),
-        Primitive::Sphere(sphere_light),
+    // Back wall (White)
+    push_wall(v_f3, v_f2, v_c2, white);
+    push_wall(v_f3, v_c2, v_c3, white);
+
+    // Left wall (Red)
+    push_wall(v_f0, v_f3, v_c3, red);
+    push_wall(v_f0, v_c3, v_c0, red);
+
+    // Right wall (Green)
+    push_wall(v_f1, v_c2, v_f2, green);
+    push_wall(v_f1, v_c1, v_c2, green);
+
+    // --- The Cube (Tall block on the right) ---
+    let cube_col = Vector3d::new(0.8, 0.8, 0.8);
+    let c_min = Vector3d::new(3.0, 0.0, 10.0);
+    let c_max = Vector3d::new(8.0, 10.0, 15.0);
+    // --- The Cube (Tall block on the right) ---
+    let cube_col = Vector3d::new(0.8, 0.8, 0.8);
+    let c_min = Vector3d::new(3.0, 0.0, 10.0);
+    let c_max = Vector3d::new(8.0, 10.0, 15.0);
+
+    // Cube vertices
+    let b0 = Vector3d::new(c_min.x, c_min.y, c_min.z);
+    let b1 = Vector3d::new(c_max.x, c_min.y, c_min.z);
+    let b2 = Vector3d::new(c_max.x, c_min.y, c_max.z);
+    let b3 = Vector3d::new(c_min.x, c_min.y, c_max.z);
+    let b4 = Vector3d::new(c_min.x, c_max.y, c_min.z);
+    let b5 = Vector3d::new(c_max.x, c_max.y, c_min.z);
+    let b6 = Vector3d::new(c_max.x, c_max.y, c_max.z);
+    let b7 = Vector3d::new(c_min.x, c_max.y, c_max.z);
+
+    // Front, Back, Left, Right, Top (Skipping bottom since it's on the floor)
+    let cube_tris = vec![
+        Triangle3d::new(b0, b1, b5, cube_col), Triangle3d::new(b0, b5, b4, cube_col), // Front
+        Triangle3d::new(b2, b3, b7, cube_col), Triangle3d::new(b2, b7, b6, cube_col), // Back
+        Triangle3d::new(b3, b0, b4, cube_col), Triangle3d::new(b3, b4, b7, cube_col), // Left
+        Triangle3d::new(b1, b2, b6, cube_col), Triangle3d::new(b1, b6, b5, cube_col), // Right
+        Triangle3d::new(b4, b5, b6, cube_col), Triangle3d::new(b4, b6, b7, cube_col), // Top
     ];
 
-    let scene_box = Box3d::new(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
+    for mut tri in cube_tris {
+        tri.roughness = 0.1;
+        tri.metallic = 0.1;
+        primitives.push(Primitive::Triangle(tri));
+    }
+
+    // --- Spheres ---
+    // Large mirror sphere
+    let mut sphere1 = Sphere::new(Vector3d::new(-4.0, 4.0, 13.0), 4.0, Vector3d::new(0.9, 0.9, 0.9));
+    sphere1.roughness = 0.07;
+    sphere1.metallic = 0.75;
+
+    // Small diffuse sphere
+    let mut sphere2 = Sphere::new(Vector3d::new(-1.0, 2.5, 6.0), 2.5, Vector3d::new(0.2, 0.3, 0.8));
+    sphere2.roughness = 0.9;
+    sphere2.metallic = 1.0;
+
+    primitives.push(Primitive::Sphere(sphere1));
+    primitives.push(Primitive::Sphere(sphere2));
+
+    // --- Lights ---
+    // Main ceiling light
+    let light1 = Light::new(Vector3d::new(0.0, 19.9, 10.0), 30.0, 1.0, Vector3d::new(0.8, 0.9, 0.5));
+    let light2 = Light::new(Vector3d::new(0.0, 10.9, 10.0), 30.0, 0.0, Vector3d::new(0.8, 0.9, 0.5));
+    let lights = vec![light1];
+
+    // --- BVH & Scene Setup ---
+    let scene_box = Box3d::new(-15.0, 15.0, -5.0, 25.0, -5.0, 25.0);
     let tree = TreeBranch::new(BV::new(scene_box));
     let mut bvh = BVH { tree, primitives };
+
     println!("{} total primitives", bvh.primitives.len());
     let start_time = Instant::now();
     bvh.build();
     println!("BVH build finished in {:?} microseconds!", start_time.elapsed().as_micros());
-    let scale = 0.2;
-    let lights = vec![
-        light1,
-        light2,
-    ];
+
+    let scale = 1.0;
+
 
     let mut camera = Camera::new(
-        Vector3d::new(0.0, 0.0, -50.0),
-        330.0*0.0174533,
-        90.0*0.0174533,
+        Vector3d::new(0.0, 10.0, -10.0),
+        70.0 * 0.0174533,
+        70.0 * 0.0174533,
         4160.0 * scale,
         1440.0 * scale,
         Vector3d::new(0.0, 0.0, 1.0),
         bvh,
         lights,
     );
+
     println!("{} total lights", camera.lights.len());
     println!("Starting trace now");
+
     let trace_time = Instant::now();
-    //let pixels = camera.render(10);
-    let pixels = camera.lazy_fire(10);
+    let pixels = camera.render(10); // Or render(10) depending on your setup
     let _ = save_png(&pixels, "render.png");
-    println!("{} total pixels, finished in {} seconds", camera.resolutionx*camera.resolutiony, trace_time.elapsed().as_millis() as f32/1000.0);
-    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize * 1)) as f32/(camera.resolutionx*camera.resolutiony));
+
+    println!("{} total pixels, finished in {} seconds", camera.resolutionx * camera.resolutiony, trace_time.elapsed().as_millis() as f32 / 1000.0);
+    println!("{} microseconds per pixel", ((trace_time.elapsed().as_micros() as usize)) as f32 / (camera.resolutionx * camera.resolutiony));
 }
-// we're so much cuter than this guy, we don't have a brow ridge (Referring to a skull)

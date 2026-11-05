@@ -33,10 +33,11 @@ impl Camera {
 
     pub fn ray_direction(&self, x: f32, y: f32) -> Vector3d {
         let w = self.dir.normalize();
-        let helper = if w.x.abs() > 0.9 {
-            Vector3d::new(0.0, 1.0, 0.0)
+        // Fix: Prevent zero-vector if looking straight up/down
+        let helper = if w.y.abs() > 0.9 {
+            Vector3d::new(1.0, 0.0, 0.0)
         } else {
-            Vector3d::new(0.0, 1.0, 0.0)
+            Vector3d::new(0.0, -1.0, 0.0)
         };
         let u = w.cross(helper).normalize();
         let v = w.cross(u).normalize();
@@ -44,8 +45,10 @@ impl Camera {
         let px = ((x + 0.5) / self.resolutionx) * 2.0 - 1.0;
         let py = 1.0 - ((y + 0.5) / self.resolutiony) * 2.0;
 
-        let scale_x = (self.fovx / 2.0).tan();
+        // Fix: Aspect ratio scaling
+        let aspect_ratio = self.resolutionx / self.resolutiony;
         let scale_y = (self.fovy / 2.0).tan();
+        let scale_x = scale_y * aspect_ratio;
 
         let dir_x = u * (px * scale_x) as f32;
         let dir_y = v * (py * scale_y) as f32;
@@ -141,20 +144,67 @@ impl Camera {
                             let light_dist = (light.position - intersection.location).magnitude();
                             let brightness: f32 = ((light_dir.dot(intersection.normal).abs()) * light.brightness) / (light_dist / light.radius.powf(1.0));
 
-                            let check = Raycast::new(Ray3d::new(intersection.location + light_dir, light_dir), raycast.bvh, raycast.x, raycast.y, 0, 0.0);
-                            let checked = check.resolve();
+                            let mut shadow_ray_origin = intersection.location + intersection.normal * 0.001;
+                            let mut occluded = false;
+                            let mut transmission = Vector3d::new(1.0, 1.0, 1.0);
 
-                            if checked.is_none() {
-                                lit += brightness;
-                                lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
-                            } else if (checked.unwrap().0 - intersection.location).magnitude() > light_dist + 0.1 {
-                                lit += brightness;
-                                lit_color = lit_color + light.color / (light_dist / light.radius.powf(1.0));
+                            // Trace up to 5 steps/bounces towards the light
+                            let mut occlusion_bounces = 0;
+                            for i in 0..5 {
+                                let check = Raycast::new(
+                                    Ray3d::new(shadow_ray_origin, light_dir),
+                                    raycast.bvh,
+                                    raycast.x,
+                                    raycast.y,
+                                    0,
+                                    0.0
+                                );
+
+                                match check.resolve() {
+                                    None => {
+                                        // Nothing in the way for this segment
+                                        break;
+                                    }
+                                    Some((hit_point, primitive)) => {
+                                        let hit_dist = (hit_point - shadow_ray_origin).magnitude();
+                                        occlusion_bounces = i;
+
+                                        // If the hit is past the light source, it doesn't block the light
+                                        if hit_dist > light_dist {
+                                            break;
+                                        }
+
+                                        // If it hit something closer than the light, check if it's opaque or transparent
+                                        // (If you have transparency, you can scale transmission by primitive.color() here)
+                                        let surface_color = primitive.color(hit_point);
+
+                                        transmission = surface_color * transmission;
+
+                                        if transmission.magnitude() < 0.01 {
+                                            occluded = true;
+                                            break;
+                                        }
+
+                                        // Advance the shadow ray origin past this hit point to check next layer
+                                        shadow_ray_origin = hit_point + light_dir * 0.001;
+
+                                        // Update remaining distance to light
+                                        let remaining_dist_check = (light.position - shadow_ray_origin).magnitude();
+                                        if remaining_dist_check <= 0.0 {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !occluded {
+                                lit += brightness/(occlusion_bounces + 1) as f32;
+                                lit_color = lit_color + (light.color * transmission) / (light_dist / light.radius.powf(1.0));
                             }
                         }
 
                         let depth_val = ((intersection.location - origin).magnitude() / 4.0) as u8;
-                        let final_color = intersection.color * lit;
+                        let final_color = intersection.color * lit_color * lit;
 
                         // Package the calculations and the next raycast
                         let update_data = (raycast.x, raycast.y, depth_val, intersection.normal, intersection.color, final_color, raycast.bounces, intersection.location, raycast.metallic);
@@ -498,7 +548,7 @@ impl Camera {
 
             bounce_limit -= 1;
         }
-        
+
         color_buffer
     }
     pub fn roughness_fire(&mut self, seed: u32) -> ByteBuffer {
@@ -580,7 +630,7 @@ impl Camera {
 
 
                         );
-                        
+
 
                         // Package the calculations and the next raycast
                         let update_data = (raycast.x, raycast.y, 0, intersection.normal, intersection.color, raycast.bounces, intersection.location, raycast.metallic);

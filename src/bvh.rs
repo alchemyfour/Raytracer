@@ -8,7 +8,6 @@ pub enum Primitive {
     Triangle(Triangle3d),
     Box(Box3d),
     Sphere(Sphere),
-    Plane(Plane),
 }
 
 impl Primitive {
@@ -19,7 +18,6 @@ impl Primitive {
             Primitive::Triangle(t) => t.color,
             Primitive::Box(b) => b.normal(point),
             Primitive::Sphere(s) => s.color,
-            Primitive::Plane(p) => p.normal(),
         }
     }
 
@@ -29,7 +27,6 @@ impl Primitive {
             Primitive::Triangle(t) => t.metallic,
             Primitive::Box(b) => 0.0,
             Primitive::Sphere(s) => s.metallic,
-            Primitive::Plane(p) => 0.0,
         }
     }
 
@@ -39,7 +36,6 @@ impl Primitive {
             Primitive::Triangle(t) => t.roughness,
             Primitive::Box(b) => 0.02,
             Primitive::Sphere(s) => s.roughness,
-            Primitive::Plane(p) => 0.02,
         }
     }
 
@@ -48,7 +44,6 @@ impl Primitive {
             Primitive::Triangle(t) => t.normal(),
             Primitive::Box(b) => b.normal(point),
             Primitive::Sphere(s) => s.normal(point),
-            Primitive::Plane(p) => p.normal(),
         }
     }
     
@@ -57,7 +52,6 @@ impl Primitive {
             Primitive::Triangle(t) => t.center(),
             Primitive::Box(b) => b.center(),
             Primitive::Sphere(s) => s.center,
-            Primitive::Plane(p) => p.origin,
         }
     }
 
@@ -70,36 +64,6 @@ impl Primitive {
                 s.center.y - s.radius, s.center.y + s.radius,
                 s.center.z - s.radius, s.center.z + s.radius,
             ),
-            Primitive::Plane(p) => {
-                let (lx, ly) = p.local_axes();
-                let half_x = lx * (p.x_size / 2.0);
-                let half_y = ly * (p.y_size / 2.0);
-
-                let corners = [
-                    p.origin + half_x + half_y,
-                    p.origin + half_x - half_y,
-                    p.origin - half_x + half_y,
-                    p.origin - half_x - half_y,
-                ];
-
-                let mut xmin = f32::INFINITY;
-                let mut xmax = f32::NEG_INFINITY;
-                let mut ymin = f32::INFINITY;
-                let mut ymax = f32::NEG_INFINITY;
-                let mut zmin = f32::INFINITY;
-                let mut zmax = f32::NEG_INFINITY;
-
-                for c in &corners {
-                    if c.x < xmin { xmin = c.x; }
-                    if c.x > xmax { xmax = c.x; }
-                    if c.y < ymin { ymin = c.y; }
-                    if c.y > ymax { ymax = c.y; }
-                    if c.z < zmin { zmin = c.z; }
-                    if c.z > zmax { zmax = c.z; }
-                }
-
-                Box3d::new(xmin, xmax, ymin, ymax, zmin, zmax)
-            }
         }
     }
 }
@@ -126,61 +90,72 @@ impl BVH {
         BVH { tree, primitives }
     }
 
-    pub fn build_section(section: BV) -> (BV, BV) {
+    // Helper to calculate a tight, padded bounding box for a list of primitives
+    pub fn calculate_bounds(primitives: &[Primitive]) -> Box3d {
+        if primitives.is_empty() {
+            return Box3d::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        }
+
+        let mut xmin = f32::INFINITY;
+        let mut xmax = f32::NEG_INFINITY;
+        let mut ymin = f32::INFINITY;
+        let mut ymax = f32::NEG_INFINITY;
+        let mut zmin = f32::INFINITY;
+        let mut zmax = f32::NEG_INFINITY;
+
+        for p in primitives {
+            let bounding = p.box3d();
+            if bounding.xmin < xmin { xmin = bounding.xmin }
+            if bounding.xmax > xmax { xmax = bounding.xmax }
+            if bounding.ymin < ymin { ymin = bounding.ymin }
+            if bounding.ymax > ymax { ymax = bounding.ymax }
+            if bounding.zmin < zmin { zmin = bounding.zmin }
+            if bounding.zmax > zmax { zmax = bounding.zmax }
+        }
+
+        // Epsilon padding prevents float-precision misses on perfectly flat 2D planes
+        let epsilon = 0.01;
+        Box3d::new(
+            xmin - epsilon, xmax + epsilon,
+            ymin - epsilon, ymax + epsilon,
+            zmin - epsilon, zmax + epsilon
+        )
+    }
+
+    pub fn build_section(mut section: BV) -> (BV, BV) {
         let x = section.box3d.xmax - section.box3d.xmin;
         let y = section.box3d.ymax - section.box3d.ymin;
         let z = section.box3d.zmax - section.box3d.zmin;
 
-        let (mut bv1, mut bv2, axis) = match (x, y, z) {
-            (a, b, c) if a >= b && a >= c => {
-                let center = (section.box3d.xmin + section.box3d.xmax) / 2.0;
-                let box1 = Box3d::new(center, section.box3d.xmax, section.box3d.ymin, section.box3d.ymax, section.box3d.zmin, section.box3d.zmax);
-                let box2 = Box3d::new(section.box3d.xmin, center, section.box3d.ymin, section.box3d.ymax, section.box3d.zmin, section.box3d.zmax);
-                (BV::new(box1), BV::new(box2), 'x')
-            }
-            (_, b, c) if b >= c => {
-                let center = (section.box3d.ymin + section.box3d.ymax) / 2.0;
-                let box1 = Box3d::new(section.box3d.xmin, section.box3d.xmax, center, section.box3d.ymax, section.box3d.zmin, section.box3d.zmax);
-                let box2 = Box3d::new(section.box3d.xmin, section.box3d.xmax, section.box3d.ymin, center, section.box3d.zmin, section.box3d.zmax);
-                (BV::new(box1), BV::new(box2), 'y')
-            }
-            (_, _, _) => {
-                let center = (section.box3d.zmin + section.box3d.zmax) / 2.0;
-                let box1 = Box3d::new(section.box3d.xmin, section.box3d.xmax, section.box3d.ymin, section.box3d.ymax, center, section.box3d.zmax);
-                let box2 = Box3d::new(section.box3d.xmin, section.box3d.xmax, section.box3d.ymin, section.box3d.ymax, section.box3d.zmin, center);
-                (BV::new(box1), BV::new(box2), 'z')
-            }
+        let axis = match (x, y, z) {
+            (a, b, c) if a >= b && a >= c => 'x',
+            (_, b, c) if b >= c => 'y',
+            _ => 'z',
         };
 
-        if let Some(ref primitives) = section.primitives {
-            let mut list1 = Vec::new();
-            let mut list2 = Vec::new();
+        let mut primitives = section.primitives.take().unwrap_or_default();
 
-            let center = match axis {
-                'x' => (section.box3d.xmin + section.box3d.xmax) / 2.0,
-                'y' => (section.box3d.ymin + section.box3d.ymax) / 2.0,
-                'z' => (section.box3d.zmin + section.box3d.zmax) / 2.0,
-                _ => unreachable!(),
-            };
+        // Object Split: Sort primitives by their centroid along the longest axis
+        primitives.sort_by(|a, b| {
+            let val_a = match axis { 'x' => a.center().x, 'y' => a.center().y, 'z' => a.center().z, _ => unreachable!() };
+            let val_b = match axis { 'x' => b.center().x, 'y' => b.center().y, 'z' => b.center().z, _ => unreachable!() };
+            val_a.partial_cmp(&val_b).unwrap_or(std::cmp::Ordering::Equal)
+        });
 
-            for primitive in primitives {
-                let val = match axis {
-                    'x' => primitive.center().x,
-                    'y' => primitive.center().y,
-                    'z' => primitive.center().z,
-                    _ => unreachable!(),
-                };
+        // Split the list exactly in half
+        let mid = primitives.len() / 2;
+        let list1 = primitives[mid..].to_vec();
+        let list2 = primitives[..mid].to_vec();
 
-                if val >= center {
-                    list1.push(primitive.clone());
-                } else {
-                    list2.push(primitive.clone());
-                }
-            }
+        // Calculate the TRUE bounds of the primitives in each half
+        let box1 = Self::calculate_bounds(&list1);
+        let box2 = Self::calculate_bounds(&list2);
 
-            bv1.primitives = Some(list1);
-            bv2.primitives = Some(list2);
-        }
+        let mut bv1 = BV::new(box1);
+        let mut bv2 = BV::new(box2);
+
+        bv1.primitives = Some(list1);
+        bv2.primitives = Some(list2);
 
         (bv1, bv2)
     }
@@ -200,12 +175,6 @@ impl BVH {
         let mut left_branch = TreeBranch::new(bv2);
         let mut right_branch = TreeBranch::new(bv1);
 
-        let left_len = left_branch.data.primitives.as_ref().map_or(0, |p| p.len());
-        let right_len = right_branch.data.primitives.as_ref().map_or(0, |p| p.len());
-        if left_len == primitives_len || right_len == primitives_len {
-            return;
-        }
-
         Self::build_node(&mut left_branch, threshold);
         Self::build_node(&mut right_branch, threshold);
 
@@ -216,24 +185,9 @@ impl BVH {
     }
 
     pub fn build(&mut self) {
-        let mut xmin = 0.0;
-        let mut xmax = 1.0;
-        let mut ymin = 0.0;
-        let mut ymax = 1.0;
-        let mut zmin = 0.0;
-        let mut zmax = 1.0;
+        // Calculate the root bounding box tightly using the new helper
+        let scene_box = Self::calculate_bounds(&self.primitives);
 
-        for primitive in &self.primitives {
-            let bounding = primitive.box3d();
-            if bounding.xmin < xmin { xmin = bounding.xmin }
-            if bounding.xmax > xmax { xmax = bounding.xmax }
-            if bounding.ymin < ymin { ymin = bounding.ymin }
-            if bounding.ymax > ymax { ymax = bounding.ymax }
-            if bounding.zmin < zmin { zmin = bounding.zmin }
-            if bounding.zmax > zmax { zmax = bounding.zmax }
-        }
-
-        let scene_box = Box3d::new(xmin, xmax, ymin, ymax, zmin, zmax);
         self.tree = TreeBranch::new(BV::new(scene_box));
         self.tree.data.primitives = Option::from(self.primitives.clone());
         let threshold = 5;
@@ -241,3 +195,4 @@ impl BVH {
         Self::build_node(&mut self.tree, threshold);
     }
 }
+

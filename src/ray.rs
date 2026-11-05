@@ -19,7 +19,7 @@ pub enum Resolvable<'a> {
 }
 
 impl<'a> Resolvable<'a> {
-    pub fn check_intersection(&self, ray: &Ray3d) -> Option<Vector3d> {
+    pub fn check_intersection(&self, ray: &Ray3d) -> Option<f32> {
         match self {
             Resolvable::Primitive(primitive) => {
                 match primitive {
@@ -44,7 +44,7 @@ impl<'a> Resolvable<'a> {
                         }
                         let t = f * e2.dot(q);
                         if t > 1e-6 {
-                            Some(ray.t(&t))
+                            Some(t)
                         } else {
                             None
                         }
@@ -69,11 +69,8 @@ impl<'a> Resolvable<'a> {
                             } else {
                                 return None;
                             };
-                            Some(ray.t(&t))
+                            Some(t)
                         }
-                    }
-                    Primitive::Plane(plane) => {
-                        ray.intersecting_plane(plane)
                     }
                 }
             }
@@ -101,41 +98,51 @@ impl<'a> Raycast<'a> {
         let mut min_t = f32::INFINITY;
 
         while let Some(item) = resolve_stack.pop() {
-            if let Some(hit_point) = item.check_intersection(&self.ray3d) {
-                let t = (hit_point - self.ray3d.origin).magnitude();
-                if t >= min_t {
-                    continue;
+            match item {
+                Resolvable::Branch(node) => {
+                    if let Some(t) = item.check_intersection(&self.ray3d) {
+                        // Traverse branches as long as they aren't strictly behind previously hit geometry
+                        if t < min_t {
+                            if let Some(ref primitives) = node.data.primitives {
+                                for primitive in primitives {
+                                    resolve_stack.push(Resolvable::Primitive(primitive));
+                                }
+                            }
+                            if let Some(ref right_any) = node.right {
+                                if let Some(right_branch) = right_any.downcast_ref::<TreeBranch>() {
+                                    resolve_stack.push(Resolvable::Branch(right_branch));
+                                } else if let Some(right_bv) = right_any.downcast_ref::<BV>() {
+                                    resolve_stack.push(Resolvable::BV(right_bv));
+                                }
+                            }
+                            if let Some(ref left_any) = node.left {
+                                if let Some(left_branch) = left_any.downcast_ref::<TreeBranch>() {
+                                    resolve_stack.push(Resolvable::Branch(left_branch));
+                                } else if let Some(left_bv) = left_any.downcast_ref::<BV>() {
+                                    resolve_stack.push(Resolvable::BV(left_bv));
+                                }
+                            }
+                        }
+                    }
                 }
-
-                match item {
-                    Resolvable::Branch(node) => {
-                        if let Some(ref primitives) = node.data.primitives {
-                            for primitive in primitives {
-                                resolve_stack.push(Resolvable::Primitive(primitive));
-                            }
-                        }
-                        if let Some(ref right_any) = node.right {
-                            if let Some(right_branch) = right_any.downcast_ref::<TreeBranch>() {
-                                resolve_stack.push(Resolvable::Branch(right_branch));
-                            }
-                        }
-                        if let Some(ref left_any) = node.left {
-                            if let Some(left_branch) = left_any.downcast_ref::<TreeBranch>() {
-                                resolve_stack.push(Resolvable::Branch(left_branch));
+                Resolvable::BV(bv) => {
+                    if let Some(t) = item.check_intersection(&self.ray3d) {
+                        if t < min_t {
+                            if let Some(ref primitives) = bv.primitives {
+                                for primitive in primitives {
+                                    resolve_stack.push(Resolvable::Primitive(primitive));
+                                }
                             }
                         }
                     }
-                    Resolvable::Primitive(primitive) => {
-                        if t > EPSILON {
+                }
+                Resolvable::Primitive(primitive) => {
+                    if let Some(t) = item.check_intersection(&self.ray3d) {
+                        // Geometry hits must be strictly in front of the origin ray to avoid self-intersection
+                        if t > EPSILON && t < min_t {
                             min_t = t;
+                            let hit_point = self.ray3d.t(&t);
                             closest_hit = Some((hit_point, primitive));
-                        }
-                    }
-                    Resolvable::BV(bv) => {
-                        if let Some(ref primitives) = bv.primitives {
-                            for primitive in primitives {
-                                resolve_stack.push(Resolvable::Primitive(primitive));
-                            }
                         }
                     }
                 }

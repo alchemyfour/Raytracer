@@ -125,6 +125,14 @@ impl Mul<f32> for Vector3d {
     }
 }
 
+impl Mul<Vector3d> for Vector3d {
+    type Output = Vector3d;
+
+    fn mul(self, rhs: Vector3d) -> Vector3d {
+        Vector3d::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z)
+    }
+}
+
 
 impl Mul<f32> for &Vector3d {
     type Output = Vector3d;
@@ -241,13 +249,13 @@ pub struct Ray3d {
 
 impl Ray3d {
     pub fn new(origin: Vector3d, direction: Vector3d) -> Ray3d {
-        Ray3d {origin, direction: direction.normalize()}
+        Ray3d { origin, direction: direction.normalize() }
     }
 
     pub fn t(&self, t: &f32) -> Vector3d {
         Vector3d::new(self.direction.x * t + self.origin.x, self.direction.y * t + self.origin.y, self.direction.z * t + self.origin.z)
     }
-    
+
     pub fn intersecting_plane(&self, plane: &Plane) -> Option<Vector3d> {
         let denom = self.direction.dot(plane.normal);
 
@@ -264,76 +272,33 @@ impl Ray3d {
         Some(self.origin.add(self.direction.mul(t)))
     }
 
-    pub fn intersecting_box(&self, box3d: &Box3d) -> Option<Vector3d> {
-        let mut tmin = f32::NEG_INFINITY;
-        let mut tmax = f32::INFINITY;
-        
-        if self.direction.x.abs() < 1e-6 {
-            if self.origin.x < box3d.xmin || self.origin.x > box3d.xmax  {
-                return None;
-            }
+    pub fn intersecting_box(&self, box3d: &Box3d) -> Option<f32> {
+        let inv_dir_x = 1.0 / self.direction.x;
+        let inv_dir_y = 1.0 / self.direction.y;
+        let inv_dir_z = 1.0 / self.direction.z;
+
+        let t0_x = (box3d.xmin - self.origin.x) * inv_dir_x;
+        let t1_x = (box3d.xmax - self.origin.x) * inv_dir_x;
+        let tmin_x = t0_x.min(t1_x);
+        let tmax_x = t0_x.max(t1_x);
+
+        let t0_y = (box3d.ymin - self.origin.y) * inv_dir_y;
+        let t1_y = (box3d.ymax - self.origin.y) * inv_dir_y;
+        let tmin_y = t0_y.min(t1_y);
+        let tmax_y = t0_y.max(t1_y);
+
+        let t0_z = (box3d.zmin - self.origin.z) * inv_dir_z;
+        let t1_z = (box3d.zmax - self.origin.z) * inv_dir_z;
+        let tmin_z = t0_z.min(t1_z);
+        let tmax_z = t0_z.max(t1_z);
+
+        let tmin = tmin_x.max(tmin_y).max(tmin_z);
+        let tmax = tmax_x.min(tmax_y).min(tmax_z);
+
+        if tmax >= tmin && tmax >= 0.0 {
+            Some(tmin.max(0.0))
         } else {
-            let inv_dir = 1.0 / self.direction.x;
-            let mut t1 = (box3d.xmin - self.origin.x) * inv_dir;
-            let mut t2 = (box3d.xmax - self.origin.x) * inv_dir;
-
-            if t1 > t2 {
-                std::mem::swap(&mut t1, &mut t2);
-            }
-            tmin = tmin.max(t1);
-            tmax = tmax.min(t2);
-
-            if tmin > tmax {
-                return None;
-            }
+            None
         }
-        
-        if self.direction.y.abs() < 1e-6 {
-            if self.origin.y < box3d.ymin || self.origin.y > box3d.ymax {
-                return None;
-            }
-        } else {
-            let inv_dir = 1.0 / self.direction.y;
-            let mut t1 = (box3d.ymin - self.origin.y) * inv_dir;
-            let mut t2 = (box3d.ymax - self.origin.y) * inv_dir;
-
-            if t1 > t2 {
-                std::mem::swap(&mut t1, &mut t2);
-            }
-            tmin = tmin.max(t1);
-            tmax = tmax.min(t2);
-
-            if tmin > tmax {
-                return None;
-            }
-        }
-        
-        if self.direction.z.abs() < 1e-6 {
-            if self.origin.z < box3d.zmin || self.origin.z > box3d.zmax {
-                return None;
-            }
-        } else {
-            let inv_dir = 1.0 / self.direction.z;
-            let mut t1 = (box3d.zmin - self.origin.z) * inv_dir;
-            let mut t2 = (box3d.zmax - self.origin.z) * inv_dir;
-
-            if t1 > t2 {
-                std::mem::swap(&mut t1, &mut t2);
-            }
-            tmin = tmin.max(t1);
-            tmax = tmax.min(t2);
-
-            if tmin > tmax {
-                return None;
-            }
-        }
-        
-        if tmax < 0.0 {
-            return None;
-        }
-        
-        let t = tmin.max(0.0);
-
-        Some(self.t(&t))
     }
 }
