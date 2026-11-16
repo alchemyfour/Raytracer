@@ -7,6 +7,8 @@ use crate::light::Light;
 use rayon::prelude::*;
 use crate::ray::Raycast;
 
+/* Small note, this file is poorly named and actually is sort of just a renderer class */
+
 pub struct Camera {
     origin: Vector3d,
     fovy: f32,
